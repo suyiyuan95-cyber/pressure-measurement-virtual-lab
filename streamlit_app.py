@@ -1,1529 +1,2056 @@
 import streamlit as st
 import streamlit.components.v1 as components
-import random
-import math
 
 
-# ============================================================
-# PAGE SETTINGS
-# ============================================================
+# ==========================================================
+# STREAMLIT PAGE
+# ==========================================================
 
 st.set_page_config(
     page_title="Pressure Measurement Virtual Lab",
     page_icon="💧",
-    layout="centered"
+    layout="wide"
 )
 
-
-# ============================================================
-# ENGINEERING CONSTANTS
-# ============================================================
-
-RHO_HG = 13600.0       # Density of mercury, kg/m^3
-G = 9.81               # Gravity, m/s^2
-
-# Calculation tolerance
-CALC_TOLERANCE = 0.05  # +/- 5%
-
-# Instrument-reading tolerances
-BAROMETER_TOLERANCE = 2.5   # mmHg
-GAUGE_TOLERANCE = 2.5       # kPa
-
-
-# ============================================================
-# RANDOM EXPERIMENT VALUES
-# ============================================================
-
-def generate_experiment():
-
-    st.session_state.barometer_mm = float(
-        random.choice(range(735, 776, 5))
-    )
-
-    st.session_state.gauge_kpa = float(
-        random.choice(range(20, 81, 5))
-    )
-
-
-def reset_lab():
-
-    keys_to_delete = [
-        "barometer_entry",
-        "atmospheric_entry",
-        "gauge_entry",
-        "absolute_entry",
-        "student_barometer",
-        "student_atmospheric",
-        "student_gauge",
-        "student_absolute",
-    ]
-
-    for key in keys_to_delete:
-        st.session_state.pop(key, None)
-
-    generate_experiment()
-
-    st.session_state.stage = 0
-
-
-# ============================================================
-# HELPER FUNCTIONS
-# ============================================================
-
-def parse_number(value):
-
-    try:
-        return float(value)
-
-    except (TypeError, ValueError):
-        return None
-
-
-def within_five_percent(student_answer, correct_answer):
-
-    allowed_error = abs(correct_answer) * CALC_TOLERANCE
-
-    return (
-        abs(student_answer - correct_answer)
-        <= allowed_error
-    )
-
-
-# ============================================================
-# BAROMETER GRAPHIC
-# ============================================================
-
-def barometer_html(value_mm):
-
-    top_value = 780
-    bottom_value = 720
-
-    top_y = 30
-    bottom_y = 360
-
-
-    def value_to_y(value):
-
-        return (
-            bottom_y
-            -
-            (
-                (value - bottom_value)
-                /
-                (top_value - bottom_value)
-            )
-            *
-            (bottom_y - top_y)
-        )
-
-
-    mercury_y = value_to_y(value_mm)
-
-    mercury_height = bottom_y - mercury_y
-
-
-    scale_elements = ""
-
-
-    for value in range(720, 781, 5):
-
-        y = value_to_y(value)
-
-        major = value % 10 == 0
-
-
-        if major:
-            x1 = 75
-            stroke_width = 3
-        else:
-            x1 = 90
-            stroke_width = 1.5
-
-
-        scale_elements += f"""
-        <line
-            x1="{x1}"
-            y1="{y:.1f}"
-            x2="120"
-            y2="{y:.1f}"
-            stroke="#1f2937"
-            stroke-width="{stroke_width}"
-        />
-        """
-
-
-        if major:
-
-            scale_elements += f"""
-            <text
-                x="65"
-                y="{y + 5:.1f}"
-                text-anchor="end"
-                font-size="15"
-                fill="#111827"
-            >
-                {value}
-            </text>
-            """
-
-
-    html = f"""
-    <!DOCTYPE html>
-
-    <html>
-
-    <head>
-
-        <style>
-
-            body {{
-                margin: 0;
-                background: white;
-                font-family: Arial, Helvetica, sans-serif;
-            }}
-
-            .title {{
-                text-align: center;
-                font-weight: bold;
-                font-size: 20px;
-                margin-bottom: 5px;
-                color: #0f172a;
-            }}
-
-            .instruction {{
-                text-align: center;
-                color: #475569;
-                font-size: 14px;
-                margin-bottom: 5px;
-            }}
-
-        </style>
-
-    </head>
-
-
-    <body>
-
-        <div class="title">
-            Mercury Barometer
-        </div>
-
-        <div class="instruction">
-            Read the top of the mercury column.
-        </div>
-
-
-        <div style="display:flex; justify-content:center;">
-
-            <svg
-                width="260"
-                height="400"
-                viewBox="0 0 260 400"
-            >
-
-                {scale_elements}
-
-
-                <!-- Glass tube -->
-
-                <rect
-                    x="135"
-                    y="{top_y}"
-                    width="46"
-                    height="{bottom_y - top_y}"
-                    rx="18"
-                    fill="#f8fafc"
-                    stroke="#334155"
-                    stroke-width="4"
-                />
-
-
-                <!-- Mercury -->
-
-                <rect
-                    x="140"
-                    y="{mercury_y:.1f}"
-                    width="36"
-                    height="{mercury_height:.1f}"
-                    fill="#64748b"
-                />
-
-
-                <!-- Mercury meniscus -->
-
-                <ellipse
-                    cx="158"
-                    cy="{mercury_y:.1f}"
-                    rx="18"
-                    ry="5"
-                    fill="#94a3b8"
-                />
-
-
-                <!-- Bottom reservoir -->
-
-                <ellipse
-                    cx="158"
-                    cy="360"
-                    rx="28"
-                    ry="15"
-                    fill="#64748b"
-                    stroke="#334155"
-                    stroke-width="3"
-                />
-
-
-                <text
-                    x="110"
-                    y="392"
-                    text-anchor="middle"
-                    font-size="16"
-                    fill="#111827"
-                >
-                    mmHg
-                </text>
-
-            </svg>
-
-        </div>
-
-    </body>
-
-    </html>
-    """
-
-    return html
-
-
-# ============================================================
-# PRESSURE GAUGE GRAPHIC
-# ============================================================
-
-def gauge_html(value_kpa):
-
-    center_x = 170
-    center_y = 170
-
-    outer_radius = 135
-
-    gauge_elements = ""
-
-
-    # --------------------------------------------------------
-    # Gauge tick marks
-    # --------------------------------------------------------
-
-    for value in range(0, 101, 5):
-
-        angle_deg = (
-            135
-            +
-            (value / 100)
-            *
-            270
-        )
-
-        angle = math.radians(angle_deg)
-
-
-        if value % 20 == 0:
-            inner_radius = 112
-            stroke_width = 3
-        else:
-            inner_radius = 120
-            stroke_width = 1.5
-
-
-        x1 = (
-            center_x
-            +
-            outer_radius
-            *
-            math.cos(angle)
-        )
-
-        y1 = (
-            center_y
-            +
-            outer_radius
-            *
-            math.sin(angle)
-        )
-
-
-        x2 = (
-            center_x
-            +
-            inner_radius
-            *
-            math.cos(angle)
-        )
-
-        y2 = (
-            center_y
-            +
-            inner_radius
-            *
-            math.sin(angle)
-        )
-
-
-        gauge_elements += f"""
-        <line
-            x1="{x1:.1f}"
-            y1="{y1:.1f}"
-            x2="{x2:.1f}"
-            y2="{y2:.1f}"
-            stroke="#111827"
-            stroke-width="{stroke_width}"
-        />
-        """
-
-
-        # Major number labels
-
-        if value % 20 == 0:
-
-            label_radius = 93
-
-            tx = (
-                center_x
-                +
-                label_radius
-                *
-                math.cos(angle)
-            )
-
-            ty = (
-                center_y
-                +
-                label_radius
-                *
-                math.sin(angle)
-            )
-
-
-            gauge_elements += f"""
-            <text
-                x="{tx:.1f}"
-                y="{ty + 5:.1f}"
-                text-anchor="middle"
-                font-size="15"
-                font-weight="bold"
-                fill="#111827"
-            >
-                {value}
-            </text>
-            """
-
-
-    # --------------------------------------------------------
-    # Gauge needle
-    # --------------------------------------------------------
-
-    needle_angle_deg = (
-        135
-        +
-        (value_kpa / 100)
-        *
-        270
-    )
-
-    needle_angle = math.radians(
-        needle_angle_deg
-    )
-
-
-    needle_radius = 95
-
-
-    needle_x = (
-        center_x
-        +
-        needle_radius
-        *
-        math.cos(needle_angle)
-    )
-
-    needle_y = (
-        center_y
-        +
-        needle_radius
-        *
-        math.sin(needle_angle)
-    )
-
-
-    html = f"""
-    <!DOCTYPE html>
-
-    <html>
-
-    <head>
-
-        <style>
-
-            body {{
-                margin: 0;
-                background: white;
-                font-family: Arial, Helvetica, sans-serif;
-            }}
-
-            .title {{
-                text-align: center;
-                font-weight: bold;
-                font-size: 20px;
-                color: #0f172a;
-                margin-bottom: 4px;
-            }}
-
-            .instruction {{
-                text-align: center;
-                color: #475569;
-                font-size: 14px;
-            }}
-
-        </style>
-
-    </head>
-
-
-    <body>
-
-        <div class="title">
-            Pressure Gauge
-        </div>
-
-        <div class="instruction">
-            Read the position of the red needle.
-        </div>
-
-
-        <div style="display:flex; justify-content:center;">
-
-            <svg
-                width="340"
-                height="330"
-                viewBox="0 0 340 330"
-            >
-
-                <!-- Gauge body -->
-
-                <circle
-                    cx="{center_x}"
-                    cy="{center_y}"
-                    r="145"
-                    fill="#f8fafc"
-                    stroke="#334155"
-                    stroke-width="8"
-                />
-
-
-                {gauge_elements}
-
-
-                <!-- Needle -->
-
-                <line
-                    x1="{center_x}"
-                    y1="{center_y}"
-                    x2="{needle_x:.1f}"
-                    y2="{needle_y:.1f}"
-                    stroke="#dc2626"
-                    stroke-width="6"
-                    stroke-linecap="round"
-                />
-
-
-                <!-- Center hub -->
-
-                <circle
-                    cx="{center_x}"
-                    cy="{center_y}"
-                    r="11"
-                    fill="#111827"
-                />
-
-
-                <text
-                    x="{center_x}"
-                    y="235"
-                    text-anchor="middle"
-                    font-size="19"
-                    font-weight="bold"
-                    fill="#334155"
-                >
-                    kPa
-                </text>
-
-
-                <text
-                    x="{center_x}"
-                    y="262"
-                    text-anchor="middle"
-                    font-size="12"
-                    fill="#64748b"
-                >
-                    Gauge Pressure
-                </text>
-
-            </svg>
-
-        </div>
-
-    </body>
-
-    </html>
-    """
-
-    return html
-
-
-# ============================================================
-# INITIALIZE SESSION
-# ============================================================
-
-if "stage" not in st.session_state:
-
-    st.session_state.stage = 0
-
-
-if "barometer_mm" not in st.session_state:
-
-    generate_experiment()
-
-
-# ============================================================
-# TRUE EXPERIMENT VALUES
-# ============================================================
-
-barometer_mm = (
-    st.session_state.barometer_mm
-)
-
-gauge_kpa = (
-    st.session_state.gauge_kpa
-)
-
-
-# Convert mm to m
-
-barometer_m = (
-    barometer_mm
-    /
-    1000
-)
-
-
-# Atmospheric pressure
-
-patm_pa = (
-    RHO_HG
-    *
-    G
-    *
-    barometer_m
-)
-
-
-patm_kpa = (
-    patm_pa
-    /
-    1000
-)
-
-
-# Absolute pressure
-
-pabs_kpa = (
-    patm_kpa
-    +
-    gauge_kpa
-)
-
-
-# ============================================================
-# PAGE HEADER
-# ============================================================
-
-st.title(
-    "💧 Pressure Measurement Virtual Lab"
-)
+st.title("💧 Pressure Measurement Virtual Lab")
 
 st.write(
     """
-    In this experiment, you will determine the
-    **absolute pressure** of a pressurized system.
+    Complete the experiment by interacting with the virtual
+    laboratory equipment.
 
-    Complete each laboratory procedure in order.
+    **Drag the instruments to the correct locations and record
+    your measurements.**
     """
 )
 
 
-# ============================================================
-# SIDEBAR
-# ============================================================
+# ==========================================================
+# VIRTUAL LAB GAME
+# ==========================================================
 
-with st.sidebar:
+virtual_lab = r"""
+<!DOCTYPE html>
 
-    st.header(
-        "Lab Progress"
-    )
+<html lang="en">
 
+<head>
 
-    progress = min(
-        st.session_state.stage
-        /
-        8,
-        1.0
-    )
+<meta charset="UTF-8">
 
+<style>
 
-    st.progress(
-        progress
-    )
+* {
+    box-sizing: border-box;
+}
 
-
-    st.write(
-        f"Stage {st.session_state.stage} of 8"
-    )
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #eef4f8;
+    color: #1f2937;
+}
 
 
-    st.markdown("---")
+/* ======================================================
+   MAIN LAB
+====================================================== */
+
+.lab {
+    max-width: 1200px;
+    margin: auto;
+    padding: 20px;
+}
+
+.panel {
+    background: white;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow:
+        0 3px 12px
+        rgba(0,0,0,0.10);
+}
+
+h2 {
+    color: #075985;
+}
 
 
-    if st.button(
-        "🔄 Restart Experiment",
-        use_container_width=True
-    ):
+/* ======================================================
+   STATUS
+====================================================== */
 
-        reset_lab()
-
-        st.rerun()
-
-
-# ============================================================
-# STAGE 0 — START
-# ============================================================
-
-if st.session_state.stage == 0:
-
-    st.header(
-        "Experiment Setup"
-    )
+.status {
+    background: #e0f2fe;
+    border-left: 6px solid #0284c7;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 7px;
+}
 
 
-    st.info(
-        """
-        You will perform this experiment one step at a time.
+/* ======================================================
+   LAB BENCH
+====================================================== */
 
-        The next procedure will remain locked until the
-        current procedure is completed.
-        """
-    )
-
-
-    st.subheader(
-        "Available Equipment"
-    )
+.lab-area {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 20px;
+}
 
 
-    st.write(
-        """
-        • Mercury barometer  
-        • Pressurized vessel  
-        • Pressure gauge  
-        • Pressure test port  
-        • Isolation valve
-        """
-    )
+/* ======================================================
+   EQUIPMENT TRAY
+====================================================== */
+
+.tray {
+    background: #f8fafc;
+    border: 2px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 15px;
+}
+
+.tray h3 {
+    text-align: center;
+}
 
 
-    if st.button(
-        "▶ Start Experiment",
-        type="primary",
-        use_container_width=True
-    ):
+.instrument {
+    background: white;
+    border: 3px solid #64748b;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 15px 0;
+    text-align: center;
 
-        st.session_state.stage = 1
+    cursor: grab;
 
-        st.rerun()
+    user-select: none;
 
+    transition: 0.2s;
+}
 
-    st.stop()
+.instrument:hover {
+    transform: scale(1.03);
+    border-color: #0284c7;
+}
 
-
-# ============================================================
-# SECTION 1 — ATMOSPHERIC PRESSURE
-# ============================================================
-
-if st.session_state.stage >= 1:
-
-    st.header(
-        "1. Measure Atmospheric Pressure"
-    )
-
-
-# ============================================================
-# STAGE 1 — PLACE BAROMETER
-# ============================================================
-
-if st.session_state.stage == 1:
-
-    st.write(
-        """
-        The first measurement required is the
-        **local atmospheric pressure**.
-        """
-    )
+.instrument:active {
+    cursor: grabbing;
+}
 
 
-    st.warning(
-        """
-        The barometer is exposed to the surrounding
-        atmosphere. It is **not connected to the pressure vessel**.
-        """
-    )
+.instrument-icon {
+    font-size: 55px;
+}
 
 
-    st.write(
-        """
-        Place the mercury barometer at the laboratory
-        measurement station.
-        """
-    )
+/* ======================================================
+   EXPERIMENT AREA
+====================================================== */
+
+.experiment-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
 
 
-    if st.button(
-        "🧰 Place Barometer at Measurement Station",
-        type="primary",
-        use_container_width=True
-    ):
+/* ======================================================
+   DROP ZONES
+====================================================== */
 
-        st.session_state.stage = 2
+.drop-zone {
+    min-height: 280px;
 
-        st.rerun()
+    border: 3px dashed #94a3b8;
 
+    border-radius: 15px;
 
-    st.stop()
+    background: #f8fafc;
 
+    display: flex;
+    flex-direction: column;
 
-# ============================================================
-# DISPLAY BAROMETER
-# ============================================================
+    justify-content: center;
+    align-items: center;
 
-if st.session_state.stage >= 2:
+    padding: 20px;
 
-    components.html(
-        barometer_html(
-            barometer_mm
-        ),
-        height=450,
-        scrolling=False
-    )
+    text-align: center;
+
+    transition: 0.2s;
+}
 
 
-# ============================================================
-# STAGE 2 — READ BAROMETER
-# ============================================================
-
-if st.session_state.stage == 2:
-
-    st.subheader(
-        "Record Barometer Reading"
-    )
+.drop-zone.drag-over {
+    border-color: #0284c7;
+    background: #e0f2fe;
+}
 
 
-    st.write(
-        """
-        Observe the height of the mercury column.
-
-        Record the value shown by the instrument.
-        """
-    )
+.drop-zone.success {
+    border-style: solid;
+    border-color: #16a34a;
+    background: #f0fdf4;
+}
 
 
-    with st.form(
-        "barometer_form"
-    ):
+.zone-icon {
+    font-size: 60px;
+}
 
-        barometer_text = st.text_input(
-            "Barometer reading",
-            placeholder="Enter your reading",
-            key="barometer_entry"
+
+/* ======================================================
+   BAROMETER
+====================================================== */
+
+.barometer-container {
+    display: none;
+    margin-top: 10px;
+}
+
+
+.barometer {
+    position: relative;
+
+    width: 180px;
+    height: 330px;
+
+    margin: auto;
+}
+
+
+.baro-scale {
+    position: absolute;
+
+    left: 0;
+    top: 10px;
+
+    width: 80px;
+    height: 300px;
+}
+
+
+.baro-tube {
+    position: absolute;
+
+    left: 100px;
+    top: 10px;
+
+    width: 45px;
+    height: 300px;
+
+    border: 4px solid #334155;
+
+    border-radius:
+        18px 18px 6px 6px;
+
+    overflow: hidden;
+
+    background: white;
+}
+
+
+.mercury {
+    position: absolute;
+
+    bottom: 0;
+
+    width: 100%;
+
+    background:
+        linear-gradient(
+            to right,
+            #475569,
+            #cbd5e1,
+            #475569
+        );
+
+    transition: height 0.8s;
+}
+
+
+.scale-line {
+    position: absolute;
+
+    right: 0;
+
+    width: 28px;
+
+    border-top: 1px solid #334155;
+}
+
+
+.scale-line.major {
+    width: 40px;
+    border-top: 2px solid #111827;
+}
+
+
+.scale-label {
+    position: absolute;
+
+    right: 47px;
+
+    transform:
+        translateY(-50%);
+
+    font-size: 13px;
+}
+
+
+/* ======================================================
+   PRESSURE VESSEL
+====================================================== */
+
+.vessel {
+    width: 250px;
+    height: 180px;
+
+    background:
+        linear-gradient(
+            #cbd5e1,
+            #94a3b8
+        );
+
+    border: 5px solid #475569;
+
+    border-radius: 50px;
+
+    position: relative;
+
+    margin: 25px auto;
+}
+
+
+.vessel-label {
+    position: absolute;
+
+    width: 100%;
+
+    top: 70px;
+
+    text-align: center;
+
+    font-weight: bold;
+}
+
+
+.test-port {
+    position: absolute;
+
+    width: 30px;
+    height: 30px;
+
+    background: #111827;
+
+    border-radius: 50%;
+
+    right: -18px;
+    top: 70px;
+}
+
+
+.test-port-label {
+    position: absolute;
+
+    right: -95px;
+    top: 68px;
+
+    font-size: 13px;
+}
+
+
+/* ======================================================
+   GAUGE
+====================================================== */
+
+.gauge-container {
+    display: none;
+
+    margin-top: 20px;
+}
+
+
+.gauge {
+    position: relative;
+
+    width: 260px;
+    height: 260px;
+
+    border: 8px solid #334155;
+
+    border-radius: 50%;
+
+    background: white;
+
+    margin: auto;
+}
+
+
+.gauge-tick {
+    position: absolute;
+
+    width: 2px;
+    height: 14px;
+
+    background: #111827;
+
+    left: 50%;
+    top: 12px;
+
+    transform-origin:
+        1px 118px;
+}
+
+
+.gauge-number {
+    position: absolute;
+
+    font-size: 13px;
+    font-weight: bold;
+}
+
+
+.needle-wrapper {
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    width: 0;
+    height: 0;
+
+    transform: rotate(-120deg);
+
+    transition:
+        transform 1s ease;
+}
+
+
+.needle {
+    position: absolute;
+
+    width: 5px;
+    height: 90px;
+
+    left: -2px;
+    top: -90px;
+
+    background: #dc2626;
+
+    border-radius: 5px;
+}
+
+
+.gauge-center {
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    width: 18px;
+    height: 18px;
+
+    transform:
+        translate(
+            -50%,
+            -50%
+        );
+
+    border-radius: 50%;
+
+    background: #111827;
+}
+
+
+.gauge-unit {
+    position: absolute;
+
+    left: 50%;
+    top: 68%;
+
+    transform:
+        translateX(-50%);
+
+    font-weight: bold;
+}
+
+
+/* ======================================================
+   INPUT / CALCULATIONS
+====================================================== */
+
+.task {
+    display: none;
+
+    background: white;
+
+    border-left:
+        6px solid #0284c7;
+
+    padding: 20px;
+
+    margin-top: 20px;
+
+    border-radius: 8px;
+}
+
+
+.task.active {
+    display: block;
+}
+
+
+.input-row {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    margin-top: 10px;
+}
+
+
+input {
+    width: 180px;
+
+    padding: 10px;
+
+    border:
+        2px solid #cbd5e1;
+
+    border-radius: 7px;
+
+    font-size: 16px;
+}
+
+
+button {
+    padding:
+        11px 18px;
+
+    border: none;
+
+    border-radius: 7px;
+
+    background: #0284c7;
+
+    color: white;
+
+    font-size: 15px;
+
+    cursor: pointer;
+}
+
+
+button:hover {
+    background: #0369a1;
+}
+
+
+button.secondary {
+    background: #475569;
+}
+
+
+.feedback {
+    margin-top: 12px;
+
+    padding: 10px;
+
+    border-radius: 6px;
+}
+
+
+.correct {
+    background: #dcfce7;
+    color: #166534;
+}
+
+
+.incorrect {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+
+/* ======================================================
+   VALVE
+====================================================== */
+
+.valve-area {
+    display: none;
+
+    text-align: center;
+
+    margin-top: 15px;
+}
+
+
+.valve-button {
+    background: #16a34a;
+}
+
+
+.valve-button:hover {
+    background: #15803d;
+}
+
+
+/* ======================================================
+   COMPLETE
+====================================================== */
+
+.complete {
+    display: none;
+
+    background: #dcfce7;
+
+    border:
+        3px solid #16a34a;
+
+    border-radius: 12px;
+
+    padding: 25px;
+
+    text-align: center;
+
+    margin-top: 25px;
+}
+
+
+@media (
+    max-width: 850px
+) {
+
+    .lab-area {
+        grid-template-columns: 1fr;
+    }
+
+    .experiment-area {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div class="lab">
+
+
+<!-- =====================================================
+     STATUS
+===================================================== -->
+
+<div
+    class="status"
+    id="status"
+>
+    Step 1:
+    Drag the barometer from the equipment tray
+    to the Atmospheric Measurement Station.
+</div>
+
+
+
+<!-- =====================================================
+     LAB AREA
+===================================================== -->
+
+<div class="lab-area">
+
+
+<!-- EQUIPMENT TRAY -->
+
+<div class="tray">
+
+<h3>
+🧰 Equipment Tray
+</h3>
+
+
+<div
+    id="barometerInstrument"
+    class="instrument"
+    draggable="true"
+    ondragstart="dragStart(event)"
+    data-equipment="barometer"
+>
+
+    <div class="instrument-icon">
+        🌡️
+    </div>
+
+    <strong>
+        Mercury Barometer
+    </strong>
+
+    <p>
+        Drag to measurement station
+    </p>
+
+</div>
+
+
+
+<div
+    id="gaugeInstrument"
+    class="instrument"
+    draggable="true"
+    ondragstart="dragStart(event)"
+    data-equipment="gauge"
+>
+
+    <div class="instrument-icon">
+        🧭
+    </div>
+
+    <strong>
+        Pressure Gauge
+    </strong>
+
+    <p>
+        Use after atmospheric
+        pressure is determined
+    </p>
+
+</div>
+
+
+</div>
+
+
+
+<!-- EXPERIMENT AREA -->
+
+<div class="experiment-area">
+
+
+<!-- ATMOSPHERE STATION -->
+
+<div
+    id="atmosphereZone"
+    class="drop-zone"
+    ondragover="allowDrop(event)"
+    ondragleave="leaveDrop(event)"
+    ondrop="dropEquipment(event)"
+    data-zone="atmosphere"
+>
+
+    <div class="zone-icon">
+        🌤️
+    </div>
+
+    <h3>
+        Atmospheric Measurement Station
+    </h3>
+
+    <p>
+        Place the barometer here
+        to measure atmospheric pressure.
+    </p>
+
+
+    <div
+        id="barometerDisplay"
+        class="barometer-container"
+    >
+
+        <div class="barometer">
+
+            <div
+                id="baroScale"
+                class="baro-scale"
+            >
+            </div>
+
+
+            <div class="baro-tube">
+
+                <div
+                    id="mercury"
+                    class="mercury"
+                >
+                </div>
+
+            </div>
+
+        </div>
+
+        <strong>
+            Mercury Barometer
+        </strong>
+
+    </div>
+
+</div>
+
+
+
+<!-- PRESSURE VESSEL -->
+
+<div
+    id="vesselZone"
+    class="drop-zone"
+    ondragover="allowDrop(event)"
+    ondragleave="leaveDrop(event)"
+    ondrop="dropEquipment(event)"
+    data-zone="vessel"
+>
+
+    <h3>
+        Pressurized Vessel
+    </h3>
+
+
+    <div class="vessel">
+
+        <div class="vessel-label">
+            PRESSURE VESSEL
+        </div>
+
+
+        <div class="test-port"></div>
+
+
+        <div class="test-port-label">
+            Test Port
+        </div>
+
+    </div>
+
+
+    <p>
+        Connect the pressure gauge
+        to the test port.
+    </p>
+
+
+    <div
+        id="valveArea"
+        class="valve-area"
+    >
+
+        <button
+            class="valve-button"
+            onclick="openValve()"
+        >
+            🟢 Open Test-Port Valve
+        </button>
+
+    </div>
+
+
+    <div
+        id="gaugeDisplay"
+        class="gauge-container"
+    >
+
+        <div class="gauge">
+
+            <div
+                id="gaugeScale"
+            >
+            </div>
+
+
+            <div
+                id="needleWrapper"
+                class="needle-wrapper"
+            >
+
+                <div class="needle">
+                </div>
+
+            </div>
+
+
+            <div class="gauge-center">
+            </div>
+
+
+            <div class="gauge-unit">
+                kPa
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+</div>
+
+</div>
+
+
+
+<!-- =====================================================
+     TASK 1
+     RECORD BAROMETER
+===================================================== -->
+
+<div
+    id="barometerTask"
+    class="task"
+>
+
+<h2>
+Step 2 — Record Barometer Reading
+</h2>
+
+<p>
+Read the mercury level from the instrument.
+</p>
+
+
+<div class="input-row">
+
+<input
+    id="barometerInput"
+    type="number"
+    placeholder="Enter reading"
+>
+
+<span>
+mmHg
+</span>
+
+<button onclick="checkBarometer()">
+Record Reading
+</button>
+
+</div>
+
+
+<div
+    id="barometerFeedback"
+>
+</div>
+
+</div>
+
+
+
+<!-- =====================================================
+     TASK 2
+     ATMOSPHERIC PRESSURE
+===================================================== -->
+
+<div
+    id="atmosphericTask"
+    class="task"
+>
+
+<h2>
+Step 3 — Calculate Atmospheric Pressure
+</h2>
+
+<p>
+Use your recorded barometer measurement.
+</p>
+
+
+<p>
+
+<strong>
+P<sub>atm</sub>
+=
+ρ<sub>Hg</sub>gh
+</strong>
+
+</p>
+
+
+<p>
+
+ρ<sub>Hg</sub>
+=
+13,600 kg/m³
+
+<br>
+
+g
+=
+9.81 m/s²
+
+</p>
+
+
+<div class="input-row">
+
+<input
+    id="atmosphericInput"
+    type="number"
+    step="0.01"
+    placeholder="Enter pressure"
+>
+
+<span>
+kPa
+</span>
+
+<button onclick="checkAtmospheric()">
+Check Calculation
+</button>
+
+</div>
+
+
+<div
+    id="atmosphericFeedback"
+>
+</div>
+
+</div>
+
+
+
+<!-- =====================================================
+     TASK 3
+     GAUGE READING
+===================================================== -->
+
+<div
+    id="gaugeTask"
+    class="task"
+>
+
+<h2>
+Step 6 — Record Pressure Gauge Reading
+</h2>
+
+<p>
+Read the red needle on the pressure gauge.
+</p>
+
+
+<div class="input-row">
+
+<input
+    id="gaugeInput"
+    type="number"
+    placeholder="Enter reading"
+>
+
+<span>
+kPa
+</span>
+
+<button onclick="checkGauge()">
+Record Reading
+</button>
+
+</div>
+
+
+<div
+    id="gaugeFeedback"
+>
+</div>
+
+</div>
+
+
+
+<!-- =====================================================
+     TASK 4
+     ABSOLUTE PRESSURE
+===================================================== -->
+
+<div
+    id="absoluteTask"
+    class="task"
+>
+
+<h2>
+Step 7 — Calculate Absolute Pressure
+</h2>
+
+
+<p>
+
+<strong>
+
+P<sub>abs</sub>
+=
+P<sub>gauge</sub>
++
+P<sub>atm</sub>
+
+</strong>
+
+</p>
+
+
+<div class="input-row">
+
+<input
+    id="absoluteInput"
+    type="number"
+    step="0.01"
+    placeholder="Enter pressure"
+>
+
+<span>
+kPa
+</span>
+
+<button onclick="checkAbsolute()">
+Submit Final Result
+</button>
+
+</div>
+
+
+<div
+    id="absoluteFeedback"
+>
+</div>
+
+</div>
+
+
+
+<!-- =====================================================
+     COMPLETE
+===================================================== -->
+
+<div
+    id="complete"
+    class="complete"
+>
+
+<h2>
+🎉 Experiment Complete!
+</h2>
+
+<p>
+Your final absolute pressure is within
+the required ±5% error.
+</p>
+
+<button onclick="location.reload()">
+🔄 Start New Experiment
+</button>
+
+</div>
+
+
+</div>
+
+
+
+<script>
+
+
+// ==========================================================
+// EXPERIMENT VALUES
+// ==========================================================
+
+const rhoHg = 13600;
+
+const gravity = 9.81;
+
+
+// Random barometer
+const possibleBarometer =
+[
+735,740,745,750,755,
+760,765,770,775
+];
+
+
+const possibleGauge =
+[
+20,25,30,35,40,45,
+50,55,60,65,70,75,80
+];
+
+
+const barometerValue =
+possibleBarometer[
+Math.floor(
+Math.random()
+*
+possibleBarometer.length
+)
+];
+
+
+const gaugeValue =
+possibleGauge[
+Math.floor(
+Math.random()
+*
+possibleGauge.length
+)
+];
+
+
+const atmosphericPressure =
+rhoHg
+*
+gravity
+*
+(barometerValue / 1000)
+/
+1000;
+
+
+const absolutePressure =
+atmosphericPressure
++
+gaugeValue;
+
+
+
+// ==========================================================
+// STUDENT DATA
+// ==========================================================
+
+let studentBarometer = null;
+
+let studentAtmospheric = null;
+
+let studentGauge = null;
+
+let valveOpened = false;
+
+
+
+// ==========================================================
+// CREATE BAROMETER SCALE
+// ==========================================================
+
+function createBarometerScale() {
+
+    const scale =
+    document.getElementById(
+        "baroScale"
+    );
+
+
+    for (
+        let value = 720;
+        value <= 780;
+        value += 5
+    ) {
+
+        const percent =
+        (
+            (value - 720)
+            /
+            60
         )
-
-
-        st.caption(
-            "Unit: mmHg"
-        )
-
-
-        submitted = (
-            st.form_submit_button(
-                "Record Measurement",
-                type="primary",
-                use_container_width=True
-            )
-        )
-
-
-    if submitted:
-
-        answer = parse_number(
-            barometer_text
-        )
-
-
-        if answer is None:
-
-            st.error(
-                "Please enter a numerical measurement."
-            )
-
-
-        elif (
-            abs(
-                answer
-                -
-                barometer_mm
-            )
-            <=
-            BAROMETER_TOLERANCE
-        ):
-
-            st.session_state.student_barometer = (
-                answer
-            )
-
-            st.session_state.stage = 3
-
-            st.rerun()
-
-
-        else:
-
-            st.error(
-                """
-                Your measurement does not agree with
-                the instrument reading.
-
-                Look carefully at the mercury level
-                and scale, then try again.
-                """
-            )
-
-
-    st.stop()
-
-
-# ============================================================
-# BAROMETER READING ACCEPTED
-# ============================================================
-
-if st.session_state.stage >= 3:
-
-    st.success(
-        "✓ Barometer measurement recorded."
-    )
-
-
-    st.write(
-        "Recorded barometer reading: "
-        f"**{st.session_state.student_barometer:.1f} mmHg**"
-    )
-
-
-# ============================================================
-# STAGE 3 — ATMOSPHERIC PRESSURE CALCULATION
-# ============================================================
-
-if st.session_state.stage == 3:
-
-    st.subheader(
-        "Calculate Atmospheric Pressure"
-    )
-
-
-    st.write(
-        """
-        Using the barometer measurement you recorded,
-        determine the atmospheric pressure.
-        """
-    )
-
-
-    with st.expander(
-        "Need a formula?"
-    ):
-
-        st.latex(
-            r"P_{atm}=\rho_{Hg}gh"
-        )
-
-
-        st.write(
-            r"""
-            Mercury density:
-            **13,600 kg/m³**
-
-            Gravitational acceleration:
-            **9.81 m/s²**
-            """
-        )
-
-
-        st.info(
-            "Remember to convert the barometer height from mm to m."
-        )
-
-
-    with st.form(
-        "atmospheric_form"
-    ):
-
-        atmospheric_text = (
-            st.text_input(
-                "Atmospheric pressure",
-                placeholder="Enter your calculated value",
-                key="atmospheric_entry"
-            )
-        )
-
-
-        st.caption(
-            "Unit: kPa"
-        )
-
-
-        submitted = (
-            st.form_submit_button(
-                "Check Atmospheric Pressure",
-                type="primary",
-                use_container_width=True
-            )
-        )
-
-
-    if submitted:
-
-        answer = parse_number(
-            atmospheric_text
-        )
-
-
-        if answer is None:
-
-            st.error(
-                "Please enter a numerical pressure."
-            )
-
-
-        elif within_five_percent(
-            answer,
-            patm_kpa
-        ):
-
-            st.session_state.student_atmospheric = (
-                answer
-            )
-
-            st.session_state.stage = 4
-
-            st.rerun()
-
-
-        else:
-
-            percent_error = (
-                abs(
-                    answer
-                    -
-                    patm_kpa
-                )
-                /
-                patm_kpa
-                *
-                100
-            )
-
-
-            st.error(
-                f"""
-                The result is outside the allowed ±5% range.
-
-                Current percent error:
-                **{percent_error:.1f}%**
-
-                Check your unit conversion and calculation.
-                """
-            )
-
-
-    st.stop()
-
-
-# ============================================================
-# ATMOSPHERIC PRESSURE ACCEPTED
-# ============================================================
-
-if st.session_state.stage >= 4:
-
-    st.success(
-        "✓ Atmospheric pressure calculation accepted."
-    )
-
-
-    st.write(
-        "Calculated atmospheric pressure: "
-        f"**{st.session_state.student_atmospheric:.2f} kPa**"
-    )
-
-
-    st.header(
-        "2. Measure Gauge Pressure"
-    )
-
-
-# ============================================================
-# STAGE 4 — CONNECT PRESSURE GAUGE
-# ============================================================
-
-if st.session_state.stage == 4:
-
-    st.write(
-        """
-        You now need to measure the gauge pressure
-        inside the pressure vessel.
-        """
-    )
-
-
-    st.write(
-        """
-        Connect the pressure gauge hose to the
-        vessel's pressure test port.
-        """
-    )
-
-
-    if st.button(
-        "🔧 Connect Pressure Gauge to Test Port",
-        type="primary",
-        use_container_width=True
-    ):
-
-        st.session_state.stage = 5
-
-        st.rerun()
-
-
-    st.stop()
-
-
-# ============================================================
-# STAGE 5 — OPEN VALVE
-# ============================================================
-
-if st.session_state.stage == 5:
-
-    st.success(
-        "✓ Pressure gauge connected."
-    )
-
-
-    st.warning(
-        """
-        The test-port isolation valve is still closed.
-
-        The pressure gauge cannot measure the vessel
-        pressure until the valve is opened.
-        """
-    )
-
-
-    if st.button(
-        "🟢 Open Test-Port Valve",
-        type="primary",
-        use_container_width=True
-    ):
-
-        st.session_state.stage = 6
-
-        st.rerun()
-
-
-    st.stop()
-
-
-# ============================================================
-# DISPLAY GAUGE
-# ============================================================
-
-if st.session_state.stage >= 6:
-
-    st.success(
-        "✓ Test-port valve is open."
-    )
-
-
-    components.html(
-        gauge_html(
-            gauge_kpa
-        ),
-        height=390,
-        scrolling=False
-    )
-
-
-# ============================================================
-# STAGE 6 — READ GAUGE
-# ============================================================
-
-if st.session_state.stage == 6:
-
-    st.subheader(
-        "Record Pressure Gauge Reading"
-    )
-
-
-    st.write(
-        """
-        Observe the gauge needle.
-
-        Record the measured gauge pressure.
-        """
-    )
-
-
-    with st.form(
-        "gauge_form"
-    ):
-
-        gauge_text = st.text_input(
-            "Gauge pressure",
-            placeholder="Enter your reading",
-            key="gauge_entry"
-        )
-
-
-        st.caption(
-            "Unit: kPa"
-        )
-
-
-        submitted = (
-            st.form_submit_button(
-                "Record Gauge Measurement",
-                type="primary",
-                use_container_width=True
-            )
-        )
-
-
-    if submitted:
-
-        answer = parse_number(
-            gauge_text
-        )
-
-
-        if answer is None:
-
-            st.error(
-                "Please enter a numerical pressure."
-            )
-
-
-        elif (
-            abs(
-                answer
-                -
-                gauge_kpa
-            )
-            <=
-            GAUGE_TOLERANCE
-        ):
-
-            st.session_state.student_gauge = (
-                answer
-            )
-
-            st.session_state.stage = 7
-
-            st.rerun()
-
-
-        else:
-
-            st.error(
-                """
-                Your recorded value does not match
-                the pressure gauge.
-
-                Look carefully at the needle position
-                and scale, then try again.
-                """
-            )
-
-
-    st.stop()
-
-
-# ============================================================
-# GAUGE READING ACCEPTED
-# ============================================================
-
-if st.session_state.stage >= 7:
-
-    st.success(
-        "✓ Gauge pressure measurement recorded."
-    )
-
-
-    st.write(
-        "Recorded gauge pressure: "
-        f"**{st.session_state.student_gauge:.1f} kPa**"
-    )
-
-
-# ============================================================
-# STAGE 7 — ABSOLUTE PRESSURE
-# ============================================================
-
-if st.session_state.stage == 7:
-
-    st.header(
-        "3. Determine Absolute Pressure"
-    )
-
-
-    st.write(
-        """
-        Use your measured atmospheric pressure
-        and measured gauge pressure to determine
-        the absolute pressure.
-        """
-    )
-
-
-    with st.expander(
-        "Need a formula?"
-    ):
-
-        st.latex(
-            r"P_{abs}=P_{gauge}+P_{atm}"
-        )
-
-
-    with st.form(
-        "absolute_form"
-    ):
-
-        absolute_text = st.text_input(
-            "Absolute pressure",
-            placeholder="Enter your calculated value",
-            key="absolute_entry"
-        )
-
-
-        st.caption(
-            "Unit: kPa"
-        )
-
-
-        submitted = (
-            st.form_submit_button(
-                "Submit Final Result",
-                type="primary",
-                use_container_width=True
-            )
-        )
-
-
-    if submitted:
-
-        answer = parse_number(
-            absolute_text
-        )
-
-
-        if answer is None:
-
-            st.error(
-                "Please enter a numerical pressure."
-            )
-
-
-        elif within_five_percent(
-            answer,
-            pabs_kpa
-        ):
-
-            st.session_state.student_absolute = (
-                answer
-            )
-
-            st.session_state.stage = 8
-
-            st.rerun()
-
-
-        else:
-
-            percent_error = (
-                abs(
-                    answer
-                    -
-                    pabs_kpa
-                )
-                /
-                pabs_kpa
-                *
-                100
-            )
-
-
-            st.error(
-                f"""
-                Your result is outside the allowed ±5% range.
-
-                Current percent error:
-                **{percent_error:.1f}%**
-
-                Recheck the relationship between
-                gauge, atmospheric, and absolute pressure.
-                """
-            )
-
-
-    st.stop()
-
-
-# ============================================================
-# STAGE 8 — COMPLETE
-# ============================================================
-
-if st.session_state.stage == 8:
-
-    st.balloons()
-
-
-    st.success(
-        "🎉 Experiment Complete!"
-    )
-
-
-    st.write(
-        """
-        You successfully measured atmospheric pressure,
-        measured gauge pressure, and determined the
-        absolute pressure of the system.
-        """
-    )
-
-
-    st.header(
-        "Laboratory Results"
-    )
-
-
-    col1, col2 = st.columns(2)
-
-
-    with col1:
-
-        st.metric(
-            "Barometer Reading",
-            f"{st.session_state.student_barometer:.1f} mmHg"
-        )
-
-
-        st.metric(
-            "Atmospheric Pressure",
-            f"{st.session_state.student_atmospheric:.2f} kPa"
-        )
-
-
-    with col2:
-
-        st.metric(
-            "Gauge Pressure",
-            f"{st.session_state.student_gauge:.1f} kPa"
-        )
-
-
-        st.metric(
-            "Absolute Pressure",
-            f"{st.session_state.student_absolute:.2f} kPa"
-        )
-
-
-    final_percent_error = (
-        abs(
-            st.session_state.student_absolute
-            -
-            pabs_kpa
-        )
-        /
-        pabs_kpa
         *
+        100;
+
+
+        const line =
+        document.createElement(
+            "div"
+        );
+
+
+        line.className =
+        "scale-line";
+
+
+        if (
+            value % 10 === 0
+        ) {
+
+            line.classList.add(
+                "major"
+            );
+
+        }
+
+
+        line.style.bottom =
+        percent + "%";
+
+
+        scale.appendChild(
+            line
+        );
+
+
+        if (
+            value % 10 === 0
+        ) {
+
+            const label =
+            document.createElement(
+                "div"
+            );
+
+
+            label.className =
+            "scale-label";
+
+
+            label.style.bottom =
+            percent + "%";
+
+
+            label.textContent =
+            value;
+
+
+            scale.appendChild(
+                label
+            );
+
+        }
+
+    }
+
+
+    const mercuryPercent =
+    (
+        (barometerValue - 720)
+        /
+        60
+    )
+    *
+    100;
+
+
+    document.getElementById(
+        "mercury"
+    ).style.height =
+    mercuryPercent + "%";
+
+}
+
+
+
+// ==========================================================
+// CREATE GAUGE SCALE
+// ==========================================================
+
+function createGaugeScale() {
+
+    const scale =
+    document.getElementById(
+        "gaugeScale"
+    );
+
+
+    const center = 130;
+
+    const radius = 105;
+
+
+    for (
+        let value = 0;
+        value <= 100;
+        value += 20
+    ) {
+
+        const angle =
+        -120
+        +
+        (value / 100)
+        *
+        240;
+
+
+        const radians =
+        angle
+        *
+        Math.PI
+        /
+        180;
+
+
+        const x =
+        center
+        +
+        radius
+        *
+        Math.sin(
+            radians
+        );
+
+
+        const y =
+        center
+        -
+        radius
+        *
+        Math.cos(
+            radians
+        );
+
+
+        const number =
+        document.createElement(
+            "div"
+        );
+
+
+        number.className =
+        "gauge-number";
+
+
+        number.textContent =
+        value;
+
+
+        number.style.left =
+        x + "px";
+
+
+        number.style.top =
+        y + "px";
+
+
+        number.style.transform =
+        "translate(-50%, -50%)";
+
+
+        scale.appendChild(
+            number
+        );
+
+    }
+
+}
+
+
+
+// ==========================================================
+// DRAG
+// ==========================================================
+
+function dragStart(event) {
+
+    const equipment =
+    event.currentTarget.dataset.equipment;
+
+
+    event.dataTransfer.setData(
+        "equipment",
+        equipment
+    );
+
+}
+
+
+
+// ==========================================================
+// ALLOW DROP
+// ==========================================================
+
+function allowDrop(event) {
+
+    event.preventDefault();
+
+
+    event.currentTarget.classList.add(
+        "drag-over"
+    );
+
+}
+
+
+
+// ==========================================================
+// LEAVE DROP
+// ==========================================================
+
+function leaveDrop(event) {
+
+    event.currentTarget.classList.remove(
+        "drag-over"
+    );
+
+}
+
+
+
+// ==========================================================
+// DROP EQUIPMENT
+// ==========================================================
+
+function dropEquipment(event) {
+
+    event.preventDefault();
+
+
+    event.currentTarget.classList.remove(
+        "drag-over"
+    );
+
+
+    const equipment =
+    event.dataTransfer.getData(
+        "equipment"
+    );
+
+
+    const zone =
+    event.currentTarget.dataset.zone;
+
+
+
+    // BAROMETER
+
+    if (
+        equipment === "barometer"
+        &&
+        zone === "atmosphere"
+    ) {
+
+        event.currentTarget.classList.add(
+            "success"
+        );
+
+
+        document.getElementById(
+            "barometerDisplay"
+        ).style.display =
+        "block";
+
+
+        document.getElementById(
+            "barometerInstrument"
+        ).style.display =
+        "none";
+
+
+        document.getElementById(
+            "barometerTask"
+        ).classList.add(
+            "active"
+        );
+
+
+        setStatus(
+            "Step 2: Read the mercury barometer and record the measurement."
+        );
+
+
+        return;
+
+    }
+
+
+
+    // GAUGE
+
+    if (
+        equipment === "gauge"
+        &&
+        zone === "vessel"
+    ) {
+
+        if (
+            studentAtmospheric === null
+        ) {
+
+            alert(
+                "Determine atmospheric pressure before connecting the pressure gauge."
+            );
+
+            return;
+
+        }
+
+
+        event.currentTarget.classList.add(
+            "success"
+        );
+
+
+        document.getElementById(
+            "gaugeInstrument"
+        ).style.display =
+        "none";
+
+
+        document.getElementById(
+            "valveArea"
+        ).style.display =
+        "block";
+
+
+        setStatus(
+            "Step 5: Pressure gauge connected. Open the test-port valve."
+        );
+
+
+        return;
+
+    }
+
+
+
+    alert(
+        "That instrument does not belong in this location."
+    );
+
+}
+
+
+
+// ==========================================================
+// BAROMETER CHECK
+// ==========================================================
+
+function checkBarometer() {
+
+    const answer =
+    parseFloat(
+        document.getElementById(
+            "barometerInput"
+        ).value
+    );
+
+
+    const feedback =
+    document.getElementById(
+        "barometerFeedback"
+    );
+
+
+    if (
+        isNaN(answer)
+    ) {
+
+        showFeedback(
+            feedback,
+            "Enter a numerical reading.",
+            false
+        );
+
+        return;
+
+    }
+
+
+    if (
+        Math.abs(
+            answer
+            -
+            barometerValue
+        )
+        <=
+        2.5
+    ) {
+
+        studentBarometer =
+        answer;
+
+
+        showFeedback(
+            feedback,
+            "✓ Measurement recorded.",
+            true
+        );
+
+
+        document.getElementById(
+            "atmosphericTask"
+        ).classList.add(
+            "active"
+        );
+
+
+        setStatus(
+            "Step 3: Calculate atmospheric pressure using your barometer reading."
+        );
+
+    }
+
+    else {
+
+        showFeedback(
+            feedback,
+            "Recheck the mercury level and scale.",
+            false
+        );
+
+    }
+
+}
+
+
+
+// ==========================================================
+// ATMOSPHERIC PRESSURE
+// ==========================================================
+
+function checkAtmospheric() {
+
+    const answer =
+    parseFloat(
+        document.getElementById(
+            "atmosphericInput"
+        ).value
+    );
+
+
+    const feedback =
+    document.getElementById(
+        "atmosphericFeedback"
+    );
+
+
+    if (
+        isNaN(answer)
+    ) {
+
+        showFeedback(
+            feedback,
+            "Enter a numerical pressure.",
+            false
+        );
+
+        return;
+
+    }
+
+
+    const error =
+    Math.abs(
+        answer
+        -
+        atmosphericPressure
+    )
+    /
+    atmosphericPressure;
+
+
+    if (
+        error <= 0.05
+    ) {
+
+        studentAtmospheric =
+        answer;
+
+
+        showFeedback(
+            feedback,
+            "✓ Atmospheric pressure accepted. Result is within ±5%.",
+            true
+        );
+
+
+        setStatus(
+            "Step 4: Drag the pressure gauge from the equipment tray to the vessel test port."
+        );
+
+    }
+
+    else {
+
+        showFeedback(
+            feedback,
+            "Result is outside ±5%. Recheck the calculation.",
+            false
+        );
+
+    }
+
+}
+
+
+
+// ==========================================================
+// OPEN VALVE
+// ==========================================================
+
+function openValve() {
+
+    valveOpened =
+    true;
+
+
+    document.getElementById(
+        "valveArea"
+    ).style.display =
+    "none";
+
+
+    document.getElementById(
+        "gaugeDisplay"
+    ).style.display =
+    "block";
+
+
+    const needleAngle =
+    -120
+    +
+    (
+        gaugeValue
+        /
         100
     )
+    *
+    240;
 
 
-    st.metric(
-        "Final Percent Error",
-        f"{final_percent_error:.2f}%"
+    document.getElementById(
+        "needleWrapper"
+    ).style.transform =
+    `rotate(${needleAngle}deg)`;
+
+
+    document.getElementById(
+        "gaugeTask"
+    ).classList.add(
+        "active"
+    );
+
+
+    setStatus(
+        "Step 6: Valve open. Read the pressure gauge and record the measurement."
+    );
+
+}
+
+
+
+// ==========================================================
+// GAUGE READING
+// ==========================================================
+
+function checkGauge() {
+
+    const answer =
+    parseFloat(
+        document.getElementById(
+            "gaugeInput"
+        ).value
+    );
+
+
+    const feedback =
+    document.getElementById(
+        "gaugeFeedback"
+    );
+
+
+    if (
+        isNaN(answer)
+    ) {
+
+        showFeedback(
+            feedback,
+            "Enter a numerical pressure.",
+            false
+        );
+
+        return;
+
+    }
+
+
+    if (
+        Math.abs(
+            answer
+            -
+            gaugeValue
+        )
+        <=
+        2.5
+    ) {
+
+        studentGauge =
+        answer;
+
+
+        showFeedback(
+            feedback,
+            "✓ Gauge pressure measurement recorded.",
+            true
+        );
+
+
+        document.getElementById(
+            "absoluteTask"
+        ).classList.add(
+            "active"
+        );
+
+
+        setStatus(
+            "Step 7: Calculate the absolute pressure."
+        );
+
+    }
+
+    else {
+
+        showFeedback(
+            feedback,
+            "Recheck the pressure gauge needle.",
+            false
+        );
+
+    }
+
+}
+
+
+
+// ==========================================================
+// ABSOLUTE PRESSURE
+// ==========================================================
+
+function checkAbsolute() {
+
+    const answer =
+    parseFloat(
+        document.getElementById(
+            "absoluteInput"
+        ).value
+    );
+
+
+    const feedback =
+    document.getElementById(
+        "absoluteFeedback"
+    );
+
+
+    if (
+        isNaN(answer)
+    ) {
+
+        showFeedback(
+            feedback,
+            "Enter a numerical pressure.",
+            false
+        );
+
+        return;
+
+    }
+
+
+    const error =
+    Math.abs(
+        answer
+        -
+        absolutePressure
     )
+    /
+    absolutePressure;
 
 
-    st.info(
-        """
-        Acceptance requirement:
+    if (
+        error <= 0.05
+    ) {
 
-        Final calculated pressure must be within **±5%**
-        of the experiment value.
-        """
-    )
-
-
-    with st.expander(
-        "Instructor / Reference Values"
-    ):
-
-        st.write(
-            "Actual barometer reading: "
-            f"**{barometer_mm:.1f} mmHg**"
-        )
+        showFeedback(
+            feedback,
+            "✓ Absolute pressure accepted.",
+            true
+        );
 
 
-        st.write(
-            "Actual atmospheric pressure: "
-            f"**{patm_kpa:.2f} kPa**"
-        )
+        document.getElementById(
+            "complete"
+        ).style.display =
+        "block";
 
 
-        st.write(
-            "Actual gauge pressure: "
-            f"**{gauge_kpa:.1f} kPa**"
-        )
+        setStatus(
+            "Experiment complete!"
+        );
+
+    }
+
+    else {
+
+        showFeedback(
+            feedback,
+            "Result is outside ±5%. Recheck Pgauge + Patm.",
+            false
+        );
+
+    }
+
+}
 
 
-        st.write(
-            "Actual absolute pressure: "
-            f"**{pabs_kpa:.2f} kPa**"
-        )
+
+// ==========================================================
+// FEEDBACK
+// ==========================================================
+
+function showFeedback(
+    element,
+    message,
+    correct
+) {
+
+    element.className =
+    correct
+    ?
+    "feedback correct"
+    :
+    "feedback incorrect";
 
 
-    if st.button(
-        "🔄 Perform Another Experiment",
-        type="primary",
-        use_container_width=True
-    ):
+    element.textContent =
+    message;
 
-        reset_lab()
+}
 
-        st.session_state.stage = 1
 
-        st.rerun()
+
+// ==========================================================
+// STATUS
+// ==========================================================
+
+function setStatus(message) {
+
+    document.getElementById(
+        "status"
+    ).textContent =
+    message;
+
+}
+
+
+
+// ==========================================================
+// START
+// ==========================================================
+
+createBarometerScale();
+
+createGaugeScale();
+
+</script>
+
+
+</body>
+
+</html>
+"""
+
+
+components.html(
+    virtual_lab,
+    height=1500,
+    scrolling=True
+)
