@@ -2,9 +2,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 
-# ==========================================================
+# ============================================================
 # STREAMLIT PAGE
-# ==========================================================
+# ============================================================
 
 st.set_page_config(
     page_title="Pressure Measurement Virtual Lab",
@@ -16,18 +16,16 @@ st.title("💧 Pressure Measurement Virtual Lab")
 
 st.write(
     """
-    Complete the experiment by interacting with the virtual
-    laboratory equipment.
+    Complete the experiment by interacting with the virtual laboratory.
 
-    **Drag the instruments to the correct locations and record
-    your measurements.**
+    **Drag, connect, measure, record, and calculate — just like a physical lab.**
     """
 )
 
 
-# ==========================================================
-# VIRTUAL LAB GAME
-# ==========================================================
+# ============================================================
+# DIGITAL VIRTUAL LAB
+# ============================================================
 
 virtual_lab = r"""
 <!DOCTYPE html>
@@ -38,7 +36,16 @@ virtual_lab = r"""
 
 <meta charset="UTF-8">
 
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
 <style>
+
+/* ============================================================
+   GENERAL
+============================================================ */
 
 * {
     box-sizing: border-box;
@@ -47,94 +54,161 @@ virtual_lab = r"""
 body {
     margin: 0;
     font-family: Arial, Helvetica, sans-serif;
-    background: #eef4f8;
+    background:
+        linear-gradient(
+            180deg,
+            #dfe7ec 0%,
+            #eef3f6 45%,
+            #d9e1e6 100%
+        );
     color: #1f2937;
 }
 
-
-/* ======================================================
-   MAIN LAB
-====================================================== */
-
-.lab {
-    max-width: 1200px;
+.lab-wrapper {
+    max-width: 1250px;
     margin: auto;
     padding: 20px;
 }
 
-.panel {
-    background: white;
-    border-radius: 14px;
-    padding: 20px;
+
+/* ============================================================
+   TOP STATUS PANEL
+============================================================ */
+
+.status-panel {
+    background: #ffffff;
+    border-left: 7px solid #0284c7;
+    border-radius: 10px;
+    padding: 18px 20px;
     margin-bottom: 20px;
-    box-shadow:
-        0 3px 12px
-        rgba(0,0,0,0.10);
+    box-shadow: 0 3px 12px rgba(0,0,0,0.12);
 }
 
-h2 {
+.status-title {
+    font-weight: bold;
     color: #075985;
+    margin-bottom: 6px;
+}
+
+#statusText {
+    font-size: 16px;
 }
 
 
-/* ======================================================
-   STATUS
-====================================================== */
+/* ============================================================
+   LAB ROOM
+============================================================ */
 
-.status {
-    background: #e0f2fe;
-    border-left: 6px solid #0284c7;
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 7px;
+.lab-room {
+    position: relative;
+
+    min-height: 740px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            #edf4f7 0%,
+            #edf4f7 66%,
+            #a98260 66%,
+            #8b694e 100%
+        );
+
+    border: 3px solid #64748b;
+    border-radius: 18px;
+
+    overflow: hidden;
+
+    box-shadow:
+        inset 0 0 30px rgba(0,0,0,0.12),
+        0 4px 18px rgba(0,0,0,0.15);
 }
 
 
-/* ======================================================
-   LAB BENCH
-====================================================== */
+/* Wall horizontal line */
 
-.lab-area {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 20px;
+.lab-room::before {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    right: 0;
+
+    top: 66%;
+
+    height: 6px;
+
+    background: #475569;
 }
 
 
-/* ======================================================
-   EQUIPMENT TRAY
-====================================================== */
+/* ============================================================
+   EQUIPMENT SHELF
+============================================================ */
 
-.tray {
-    background: #f8fafc;
-    border: 2px solid #cbd5e1;
+.equipment-shelf {
+    position: absolute;
+
+    left: 25px;
+    top: 35px;
+
+    width: 290px;
+    min-height: 570px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #d1d5db,
+            #b8bec6
+        );
+
+    border: 6px solid #475569;
+
     border-radius: 12px;
+
+    box-shadow:
+        inset 0 0 15px rgba(0,0,0,0.25);
+
     padding: 15px;
 }
 
-.tray h3 {
+.equipment-shelf h3 {
     text-align: center;
+    margin-top: 4px;
+    color: #1e293b;
 }
 
+.shelf-line {
+    border-top: 5px solid #64748b;
+    margin: 22px -15px;
+}
+
+
+/* ============================================================
+   DRAGGABLE INSTRUMENTS
+============================================================ */
 
 .instrument {
-    background: white;
-    border: 3px solid #64748b;
-    border-radius: 10px;
-    padding: 15px;
-    margin: 15px 0;
-    text-align: center;
+    position: relative;
+
+    margin: 12px auto;
 
     cursor: grab;
 
     user-select: none;
 
-    transition: 0.2s;
+    transition:
+        transform 0.18s,
+        filter 0.18s;
+
+    touch-action: none;
 }
 
 .instrument:hover {
-    transform: scale(1.03);
-    border-color: #0284c7;
+    transform: scale(1.025);
+    filter: drop-shadow(
+        0 5px 6px rgba(0,0,0,0.22)
+    );
 }
 
 .instrument:active {
@@ -142,117 +216,101 @@ h2 {
 }
 
 
-.instrument-icon {
-    font-size: 55px;
+/* ============================================================
+   DIGITAL BAROMETER
+============================================================ */
+
+.barometer-unit {
+    width: 185px;
+    height: 310px;
+}
+
+.baro-frame {
+    position: absolute;
+
+    width: 165px;
+    height: 290px;
+
+    left: 10px;
+    top: 5px;
+
+    border: 5px solid #374151;
+    border-radius: 18px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #cbd5e1,
+            #f8fafc 35%,
+            #d1d5db 70%,
+            #94a3b8
+        );
+
+    box-shadow:
+        inset 0 0 8px rgba(0,0,0,0.22),
+        0 4px 8px rgba(0,0,0,0.25);
 }
 
 
-/* ======================================================
-   EXPERIMENT AREA
-====================================================== */
+/* Barometer title */
 
-.experiment-area {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
+.baro-name {
+    position: absolute;
 
-
-/* ======================================================
-   DROP ZONES
-====================================================== */
-
-.drop-zone {
-    min-height: 280px;
-
-    border: 3px dashed #94a3b8;
-
-    border-radius: 15px;
-
-    background: #f8fafc;
-
-    display: flex;
-    flex-direction: column;
-
-    justify-content: center;
-    align-items: center;
-
-    padding: 20px;
+    width: 100%;
+    top: 9px;
 
     text-align: center;
 
-    transition: 0.2s;
+    font-size: 12px;
+    font-weight: bold;
+
+    color: #1f2937;
 }
 
 
-.drop-zone.drag-over {
-    border-color: #0284c7;
-    background: #e0f2fe;
-}
-
-
-.drop-zone.success {
-    border-style: solid;
-    border-color: #16a34a;
-    background: #f0fdf4;
-}
-
-
-.zone-icon {
-    font-size: 60px;
-}
-
-
-/* ======================================================
-   BAROMETER
-====================================================== */
-
-.barometer-container {
-    display: none;
-    margin-top: 10px;
-}
-
-
-.barometer {
-    position: relative;
-
-    width: 180px;
-    height: 330px;
-
-    margin: auto;
-}
-
+/* Scale area */
 
 .baro-scale {
     position: absolute;
 
-    left: 0;
-    top: 10px;
+    left: 16px;
+    top: 36px;
 
-    width: 80px;
-    height: 300px;
+    width: 70px;
+    height: 220px;
 }
 
 
-.baro-tube {
+/* Glass tube */
+
+.glass-tube {
     position: absolute;
 
-    left: 100px;
-    top: 10px;
+    left: 97px;
+    top: 35px;
 
-    width: 45px;
-    height: 300px;
+    width: 34px;
+    height: 220px;
 
-    border: 4px solid #334155;
+    background:
+        linear-gradient(
+            90deg,
+            rgba(255,255,255,0.7),
+            rgba(219,234,254,0.32),
+            rgba(255,255,255,0.75)
+        );
+
+    border: 3px solid #64748b;
 
     border-radius:
-        18px 18px 6px 6px;
+        16px 16px 5px 5px;
 
     overflow: hidden;
-
-    background: white;
 }
 
+
+/* Mercury */
 
 .mercury {
     position: absolute;
@@ -261,278 +319,710 @@ h2 {
 
     width: 100%;
 
+    height: 40%;
+
     background:
         linear-gradient(
-            to right,
-            #475569,
-            #cbd5e1,
-            #475569
+            90deg,
+            #475569 0%,
+            #d1d5db 40%,
+            #64748b 70%,
+            #334155 100%
         );
 
-    transition: height 0.8s;
+    transition: height 1.1s ease;
 }
 
 
-.scale-line {
+/* meniscus */
+
+.mercury::before {
+    content: "";
+
+    position: absolute;
+
+    left: 1px;
+    top: -4px;
+
+    width: calc(100% - 2px);
+    height: 8px;
+
+    background: #94a3b8;
+
+    border-radius: 50%;
+}
+
+
+/* reservoir */
+
+.baro-reservoir {
+    position: absolute;
+
+    left: 86px;
+    top: 247px;
+
+    width: 58px;
+    height: 35px;
+
+    border-radius: 50%;
+
+    border: 3px solid #475569;
+
+    background:
+        linear-gradient(
+            #cbd5e1 0%,
+            #64748b 45%,
+            #334155 100%
+        );
+}
+
+
+/* ============================================================
+   BAROMETER SCALE
+============================================================ */
+
+.baro-mark {
     position: absolute;
 
     right: 0;
 
-    width: 28px;
+    width: 22px;
 
-    border-top: 1px solid #334155;
+    border-top: 1px solid #1f2937;
 }
 
+.baro-mark.major {
+    width: 33px;
 
-.scale-line.major {
-    width: 40px;
-    border-top: 2px solid #111827;
+    border-top:
+        2px solid #111827;
 }
 
-
-.scale-label {
+.baro-label {
     position: absolute;
 
-    right: 47px;
+    right: 39px;
 
     transform:
         translateY(-50%);
 
-    font-size: 13px;
-}
-
-
-/* ======================================================
-   PRESSURE VESSEL
-====================================================== */
-
-.vessel {
-    width: 250px;
-    height: 180px;
-
-    background:
-        linear-gradient(
-            #cbd5e1,
-            #94a3b8
-        );
-
-    border: 5px solid #475569;
-
-    border-radius: 50px;
-
-    position: relative;
-
-    margin: 25px auto;
-}
-
-
-.vessel-label {
-    position: absolute;
-
-    width: 100%;
-
-    top: 70px;
-
-    text-align: center;
-
+    font-size: 10px;
     font-weight: bold;
+
+    color: #111827;
 }
 
 
-.test-port {
-    position: absolute;
-
-    width: 30px;
-    height: 30px;
-
-    background: #111827;
-
-    border-radius: 50%;
-
-    right: -18px;
-    top: 70px;
-}
-
-
-.test-port-label {
-    position: absolute;
-
-    right: -95px;
-    top: 68px;
-
-    font-size: 13px;
-}
-
-
-/* ======================================================
-   GAUGE
-====================================================== */
-
-.gauge-container {
-    display: none;
-
-    margin-top: 20px;
-}
-
-
-.gauge {
-    position: relative;
-
-    width: 260px;
-    height: 260px;
-
-    border: 8px solid #334155;
-
-    border-radius: 50%;
-
-    background: white;
-
-    margin: auto;
-}
-
-
-.gauge-tick {
-    position: absolute;
-
-    width: 2px;
-    height: 14px;
-
-    background: #111827;
-
-    left: 50%;
-    top: 12px;
-
-    transform-origin:
-        1px 118px;
-}
-
-
-.gauge-number {
-    position: absolute;
-
-    font-size: 13px;
-    font-weight: bold;
-}
-
-
-.needle-wrapper {
-    position: absolute;
-
-    left: 50%;
-    top: 50%;
-
-    width: 0;
-    height: 0;
-
-    transform: rotate(-120deg);
-
-    transition:
-        transform 1s ease;
-}
-
-
-.needle {
-    position: absolute;
-
-    width: 5px;
-    height: 90px;
-
-    left: -2px;
-    top: -90px;
-
-    background: #dc2626;
-
-    border-radius: 5px;
-}
-
-
-.gauge-center {
-    position: absolute;
-
-    left: 50%;
-    top: 50%;
-
-    width: 18px;
-    height: 18px;
-
-    transform:
-        translate(
-            -50%,
-            -50%
-        );
-
-    border-radius: 50%;
-
-    background: #111827;
-}
-
+/* ============================================================
+   DIGITAL PRESSURE GAUGE
+============================================================ */
 
 .gauge-unit {
-    position: absolute;
-
-    left: 50%;
-    top: 68%;
-
-    transform:
-        translateX(-50%);
-
-    font-weight: bold;
-}
-
-
-/* ======================================================
-   INPUT / CALCULATIONS
-====================================================== */
-
-.task {
-    display: none;
-
-    background: white;
-
-    border-left:
-        6px solid #0284c7;
-
-    padding: 20px;
-
-    margin-top: 20px;
-
-    border-radius: 8px;
-}
-
-
-.task.active {
-    display: block;
-}
-
-
-.input-row {
-    display: flex;
-
-    align-items: center;
-
-    gap: 8px;
+    width: 190px;
+    height: 245px;
 
     margin-top: 10px;
 }
 
+.gauge-case {
+    position: absolute;
+
+    left: 10px;
+    top: 5px;
+
+    width: 170px;
+    height: 170px;
+
+    border-radius: 50%;
+
+    border: 10px solid #475569;
+
+    background:
+        radial-gradient(
+            circle at 35% 30%,
+            #ffffff,
+            #f1f5f9 55%,
+            #d1d5db 100%
+        );
+
+    box-shadow:
+        inset 0 0 14px rgba(0,0,0,0.20),
+        0 5px 10px rgba(0,0,0,0.25);
+}
+
+.gauge-glass {
+    position: absolute;
+
+    left: 7px;
+    top: 7px;
+
+    width: 136px;
+    height: 136px;
+
+    border-radius: 50%;
+
+    border:
+        2px solid rgba(255,255,255,0.75);
+
+    pointer-events: none;
+}
+
+
+/* Gauge numbers */
+
+.gauge-number {
+    position: absolute;
+
+    font-size: 10px;
+    font-weight: bold;
+
+    color: #111827;
+}
+
+
+/* Needle */
+
+.needle-holder {
+    position: absolute;
+
+    left: 75px;
+    top: 75px;
+
+    width: 0;
+    height: 0;
+
+    transform: rotate(-135deg);
+
+    transition:
+        transform 1.2s cubic-bezier(.2,.8,.2,1);
+}
+
+.gauge-needle {
+    position: absolute;
+
+    width: 4px;
+    height: 56px;
+
+    left: -2px;
+    top: -56px;
+
+    background: #dc2626;
+
+    border-radius:
+        4px 4px 0 0;
+}
+
+.gauge-hub {
+    position: absolute;
+
+    left: 67px;
+    top: 67px;
+
+    width: 16px;
+    height: 16px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            #64748b,
+            #111827
+        );
+}
+
+.gauge-kpa {
+    position: absolute;
+
+    left: 0;
+    right: 0;
+    top: 105px;
+
+    text-align: center;
+
+    font-size: 11px;
+    font-weight: bold;
+}
+
+
+/* Gauge bottom connector */
+
+.gauge-connector {
+    position: absolute;
+
+    left: 79px;
+    top: 170px;
+
+    width: 30px;
+    height: 37px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #9a6c2f,
+            #e3b45e,
+            #8c5a20
+        );
+
+    border:
+        3px solid #6b4219;
+}
+
+.gauge-fitting {
+    position: absolute;
+
+    left: 68px;
+    top: 202px;
+
+    width: 52px;
+    height: 25px;
+
+    border-radius: 6px;
+
+    background:
+        linear-gradient(
+            #b7792d,
+            #e2ad58,
+            #85531d
+        );
+
+    border:
+        3px solid #6b4219;
+}
+
+
+/* ============================================================
+   ATMOSPHERIC MEASUREMENT STATION
+============================================================ */
+
+.atmosphere-station {
+    position: absolute;
+
+    left: 365px;
+    top: 45px;
+
+    width: 310px;
+    height: 350px;
+
+    border:
+        4px dashed #0284c7;
+
+    border-radius: 18px;
+
+    background:
+        rgba(224,242,254,0.67);
+
+    transition:
+        background 0.25s,
+        border-color 0.25s;
+}
+
+.atmosphere-station.drag-over {
+    background:
+        rgba(186,230,253,0.92);
+
+    border-color: #0369a1;
+}
+
+.atmosphere-station.active {
+    border-style: solid;
+
+    border-color: #16a34a;
+
+    background:
+        rgba(240,253,244,0.82);
+}
+
+.station-title {
+    text-align: center;
+
+    margin-top: 12px;
+
+    font-weight: bold;
+
+    color: #075985;
+}
+
+.station-subtitle {
+    text-align: center;
+
+    font-size: 13px;
+
+    color: #475569;
+}
+
+
+/* ============================================================
+   PRESSURE VESSEL
+============================================================ */
+
+.pressure-area {
+    position: absolute;
+
+    right: 25px;
+    top: 45px;
+
+    width: 470px;
+    height: 510px;
+}
+
+.pressure-area h3 {
+    text-align: center;
+
+    margin-top: 5px;
+
+    color: #334155;
+}
+
+.vessel {
+    position: absolute;
+
+    left: 85px;
+    top: 130px;
+
+    width: 280px;
+    height: 190px;
+
+    border:
+        6px solid #475569;
+
+    border-radius: 70px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #e2e8f0 0%,
+            #aeb8c4 35%,
+            #8794a3 60%,
+            #cbd5e1 100%
+        );
+
+    box-shadow:
+        inset 0 10px 18px rgba(255,255,255,0.42),
+        inset 0 -10px 20px rgba(0,0,0,0.20),
+        0 8px 14px rgba(0,0,0,0.25);
+}
+
+.vessel-band {
+    position: absolute;
+
+    top: 0;
+
+    width: 15px;
+    height: 100%;
+
+    background: #64748b;
+}
+
+.vessel-band.left {
+    left: 55px;
+}
+
+.vessel-band.right {
+    right: 55px;
+}
+
+.vessel-label {
+    position: absolute;
+
+    left: 0;
+    right: 0;
+
+    top: 76px;
+
+    text-align: center;
+
+    font-weight: bold;
+
+    color: #334155;
+}
+
+
+/* legs */
+
+.vessel-leg {
+    position: absolute;
+
+    width: 28px;
+    height: 65px;
+
+    background: #475569;
+
+    bottom: -58px;
+}
+
+.vessel-leg.one {
+    left: 55px;
+}
+
+.vessel-leg.two {
+    right: 55px;
+}
+
+
+/* ============================================================
+   TEST PORT
+============================================================ */
+
+.test-port {
+    position: absolute;
+
+    right: -30px;
+    top: 73px;
+
+    width: 35px;
+    height: 44px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #9a6c2f,
+            #f3c56d,
+            #8a571e
+        );
+
+    border:
+        3px solid #6b4219;
+
+    border-radius: 5px;
+}
+
+.test-port::after {
+    content: "";
+
+    position: absolute;
+
+    right: -18px;
+    top: 8px;
+
+    width: 20px;
+    height: 23px;
+
+    background: #111827;
+
+    border-radius:
+        0 8px 8px 0;
+}
+
+
+/* Drop zone around port */
+
+.port-drop-zone {
+    position: absolute;
+
+    right: -115px;
+    top: 20px;
+
+    width: 150px;
+    height: 160px;
+
+    border:
+        3px dashed transparent;
+
+    border-radius: 20px;
+
+    transition: 0.2s;
+}
+
+.port-drop-zone.drag-over {
+    border-color: #0284c7;
+
+    background:
+        rgba(224,242,254,0.55);
+}
+
+
+/* ============================================================
+   HOSE
+============================================================ */
+
+.hose {
+    position: absolute;
+
+    display: none;
+
+    left: 310px;
+    top: 60px;
+
+    width: 115px;
+    height: 130px;
+
+    border-right:
+        11px solid #222;
+
+    border-top:
+        11px solid #222;
+
+    border-radius:
+        0 55px 0 0;
+
+    z-index: 3;
+}
+
+.hose.connected {
+    display: block;
+}
+
+
+/* ============================================================
+   CONNECTED GAUGE POSITION
+============================================================ */
+
+.connected-gauge {
+    position: absolute !important;
+
+    left: 275px !important;
+    top: -50px !important;
+
+    margin: 0 !important;
+
+    transform: scale(0.88);
+}
+
+
+/* ============================================================
+   VALVE
+============================================================ */
+
+.valve-group {
+    position: absolute;
+
+    left: 362px;
+    top: 228px;
+
+    text-align: center;
+
+    display: none;
+}
+
+.valve-group.visible {
+    display: block;
+}
+
+.valve-body {
+    position: relative;
+
+    width: 82px;
+    height: 82px;
+
+    margin: auto;
+
+    border-radius: 50%;
+
+    border: 7px solid #6b4219;
+
+    background:
+        radial-gradient(
+            circle,
+            #dba74e,
+            #95601f
+        );
+
+    cursor: pointer;
+
+    box-shadow:
+        0 5px 10px rgba(0,0,0,0.25);
+}
+
+.valve-handle {
+    position: absolute;
+
+    left: 5px;
+    top: 30px;
+
+    width: 60px;
+    height: 11px;
+
+    border-radius: 8px;
+
+    background: #b91c1c;
+
+    transform: rotate(0deg);
+
+    transition:
+        transform 0.8s ease;
+}
+
+.valve-handle.open {
+    transform: rotate(90deg);
+}
+
+.valve-label {
+    margin-top: 5px;
+
+    font-size: 12px;
+    font-weight: bold;
+}
+
+
+/* ============================================================
+   TASK PANELS
+============================================================ */
+
+.tasks-area {
+    margin-top: 24px;
+}
+
+.task-card {
+    display: none;
+
+    background: white;
+
+    padding: 22px;
+
+    margin-bottom: 18px;
+
+    border-radius: 12px;
+
+    border-left:
+        7px solid #0284c7;
+
+    box-shadow:
+        0 3px 11px rgba(0,0,0,0.11);
+}
+
+.task-card.active {
+    display: block;
+}
+
+.task-card h3 {
+    margin-top: 0;
+
+    color: #075985;
+}
+
+.measurement-row {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    flex-wrap: wrap;
+}
 
 input {
-    width: 180px;
+    width: 190px;
 
-    padding: 10px;
+    padding: 12px;
+
+    font-size: 16px;
 
     border:
         2px solid #cbd5e1;
 
     border-radius: 7px;
-
-    font-size: 16px;
 }
 
+input:focus {
+    outline: none;
+
+    border-color: #0284c7;
+}
 
 button {
     padding:
-        11px 18px;
+        11px 17px;
 
     border: none;
 
@@ -547,95 +1037,96 @@ button {
     cursor: pointer;
 }
 
-
 button:hover {
     background: #0369a1;
 }
 
-
-button.secondary {
-    background: #475569;
-}
-
-
 .feedback {
     margin-top: 12px;
 
-    padding: 10px;
+    padding: 10px 12px;
 
     border-radius: 6px;
 }
 
-
 .correct {
     background: #dcfce7;
-    color: #166534;
-}
 
+    color: #166534;
+
+    border-left:
+        5px solid #16a34a;
+}
 
 .incorrect {
     background: #fee2e2;
+
     color: #991b1b;
+
+    border-left:
+        5px solid #dc2626;
 }
 
 
-/* ======================================================
-   VALVE
-====================================================== */
+/* ============================================================
+   COMPLETE PANEL
+============================================================ */
 
-.valve-area {
+.complete-panel {
     display: none;
 
-    text-align: center;
-
-    margin-top: 15px;
-}
-
-
-.valve-button {
-    background: #16a34a;
-}
-
-
-.valve-button:hover {
-    background: #15803d;
-}
-
-
-/* ======================================================
-   COMPLETE
-====================================================== */
-
-.complete {
-    display: none;
-
-    background: #dcfce7;
+    background: #f0fdf4;
 
     border:
         3px solid #16a34a;
 
-    border-radius: 12px;
+    border-radius: 14px;
 
-    padding: 25px;
+    padding: 28px;
+
+    margin-top: 25px;
 
     text-align: center;
 
-    margin-top: 25px;
+    box-shadow:
+        0 3px 12px rgba(0,0,0,0.10);
+}
+
+.complete-panel.visible {
+    display: block;
 }
 
 
-@media (
-    max-width: 850px
-) {
+/* ============================================================
+   MOBILE
+============================================================ */
 
-    .lab-area {
-        grid-template-columns: 1fr;
+@media (max-width: 1000px) {
+
+    .lab-room {
+        min-height: 1250px;
     }
 
-    .experiment-area {
-        grid-template-columns: 1fr;
+    .equipment-shelf {
+        left: 50%;
+        transform: translateX(-50%);
+
+        width: 300px;
     }
 
+    .atmosphere-station {
+        left: 50%;
+        transform: translateX(-50%);
+
+        top: 635px;
+    }
+
+    .pressure-area {
+        left: 50%;
+        transform: translateX(-50%);
+
+        top: 980px;
+    }
 }
 
 </style>
@@ -645,278 +1136,287 @@ button.secondary {
 
 <body>
 
+<div class="lab-wrapper">
 
-<div class="lab">
 
-
-<!-- =====================================================
+<!-- ============================================================
      STATUS
-===================================================== -->
+============================================================= -->
 
-<div
-    class="status"
-    id="status"
->
-    Step 1:
-    Drag the barometer from the equipment tray
-    to the Atmospheric Measurement Station.
+<div class="status-panel">
+
+    <div class="status-title">
+        Laboratory Procedure
+    </div>
+
+    <div id="statusText">
+        Step 1 — Drag the mercury barometer from the equipment shelf
+        to the atmospheric measurement station.
+    </div>
+
 </div>
 
 
+<!-- ============================================================
+     LAB ROOM
+============================================================= -->
 
-<!-- =====================================================
-     LAB AREA
-===================================================== -->
+<div
+    id="labRoom"
+    class="lab-room"
+>
 
-<div class="lab-area">
 
+<!-- ============================================================
+     EQUIPMENT SHELF
+============================================================= -->
 
-<!-- EQUIPMENT TRAY -->
-
-<div class="tray">
+<div class="equipment-shelf">
 
 <h3>
-🧰 Equipment Tray
+Equipment Shelf
 </h3>
 
 
+<!-- BAROMETER -->
+
 <div
     id="barometerInstrument"
-    class="instrument"
+    class="instrument barometer-unit"
     draggable="true"
-    ondragstart="dragStart(event)"
     data-equipment="barometer"
 >
 
-    <div class="instrument-icon">
-        🌡️
+    <div class="baro-frame">
+
+        <div class="baro-name">
+            MERCURY BAROMETER
+        </div>
+
+
+        <div
+            id="baroScale"
+            class="baro-scale"
+        >
+        </div>
+
+
+        <div class="glass-tube">
+
+            <div
+                id="mercuryColumn"
+                class="mercury"
+            >
+            </div>
+
+        </div>
+
+
+        <div class="baro-reservoir">
+        </div>
+
     </div>
-
-    <strong>
-        Mercury Barometer
-    </strong>
-
-    <p>
-        Drag to measurement station
-    </p>
 
 </div>
 
 
+<div class="shelf-line">
+</div>
+
+
+<!-- GAUGE -->
 
 <div
     id="gaugeInstrument"
-    class="instrument"
+    class="instrument gauge-unit"
     draggable="true"
-    ondragstart="dragStart(event)"
     data-equipment="gauge"
 >
 
-    <div class="instrument-icon">
-        🧭
+    <div class="gauge-case">
+
+        <div
+            id="gaugeNumbers"
+        >
+        </div>
+
+
+        <div
+            id="needleHolder"
+            class="needle-holder"
+        >
+
+            <div class="gauge-needle">
+            </div>
+
+        </div>
+
+
+        <div class="gauge-hub">
+        </div>
+
+
+        <div class="gauge-kpa">
+            kPa
+        </div>
+
+
+        <div class="gauge-glass">
+        </div>
+
     </div>
 
-    <strong>
-        Pressure Gauge
-    </strong>
 
-    <p>
-        Use after atmospheric
-        pressure is determined
-    </p>
+    <div class="gauge-connector">
+    </div>
+
+
+    <div class="gauge-fitting">
+    </div>
+
+</div>
 
 </div>
 
 
-</div>
-
-
-
-<!-- EXPERIMENT AREA -->
-
-<div class="experiment-area">
-
-
-<!-- ATMOSPHERE STATION -->
+<!-- ============================================================
+     ATMOSPHERIC MEASUREMENT STATION
+============================================================= -->
 
 <div
-    id="atmosphereZone"
-    class="drop-zone"
-    ondragover="allowDrop(event)"
-    ondragleave="leaveDrop(event)"
-    ondrop="dropEquipment(event)"
+    id="atmosphereStation"
+    class="atmosphere-station"
     data-zone="atmosphere"
 >
 
-    <div class="zone-icon">
-        🌤️
+    <div class="station-title">
+        Atmospheric Measurement Station
     </div>
 
-    <h3>
-        Atmospheric Measurement Station
-    </h3>
-
-    <p>
+    <div class="station-subtitle">
         Place the barometer here
-        to measure atmospheric pressure.
-    </p>
-
-
-    <div
-        id="barometerDisplay"
-        class="barometer-container"
-    >
-
-        <div class="barometer">
-
-            <div
-                id="baroScale"
-                class="baro-scale"
-            >
-            </div>
-
-
-            <div class="baro-tube">
-
-                <div
-                    id="mercury"
-                    class="mercury"
-                >
-                </div>
-
-            </div>
-
-        </div>
-
-        <strong>
-            Mercury Barometer
-        </strong>
-
     </div>
 
 </div>
 
 
-
-<!-- PRESSURE VESSEL -->
+<!-- ============================================================
+     PRESSURE SYSTEM
+============================================================= -->
 
 <div
-    id="vesselZone"
-    class="drop-zone"
-    ondragover="allowDrop(event)"
-    ondragleave="leaveDrop(event)"
-    ondrop="dropEquipment(event)"
-    data-zone="vessel"
+    class="pressure-area"
 >
 
-    <h3>
-        Pressurized Vessel
-    </h3>
+<h3>
+Pressurized System
+</h3>
 
 
-    <div class="vessel">
+<div class="vessel">
 
-        <div class="vessel-label">
-            PRESSURE VESSEL
-        </div>
+    <div class="vessel-band left">
+    </div>
 
-
-        <div class="test-port"></div>
-
-
-        <div class="test-port-label">
-            Test Port
-        </div>
-
+    <div class="vessel-band right">
     </div>
 
 
-    <p>
-        Connect the pressure gauge
-        to the test port.
-    </p>
+    <div class="vessel-label">
+        PRESSURE VESSEL
+    </div>
+
+
+    <div class="vessel-leg one">
+    </div>
+
+    <div class="vessel-leg two">
+    </div>
+
+
+    <div class="test-port">
+    </div>
 
 
     <div
-        id="valveArea"
-        class="valve-area"
+        id="portDropZone"
+        class="port-drop-zone"
+        data-zone="port"
+    >
+    </div>
+
+</div>
+
+
+<!-- HOSE -->
+
+<div
+    id="hose"
+    class="hose"
+>
+</div>
+
+
+<!-- VALVE -->
+
+<div
+    id="valveGroup"
+    class="valve-group"
+>
+
+    <div
+        id="valveBody"
+        class="valve-body"
+        onclick="turnValve()"
     >
 
-        <button
-            class="valve-button"
-            onclick="openValve()"
+        <div
+            id="valveHandle"
+            class="valve-handle"
         >
-            🟢 Open Test-Port Valve
-        </button>
+        </div>
 
     </div>
 
 
     <div
-        id="gaugeDisplay"
-        class="gauge-container"
+        id="valveLabel"
+        class="valve-label"
     >
-
-        <div class="gauge">
-
-            <div
-                id="gaugeScale"
-            >
-            </div>
-
-
-            <div
-                id="needleWrapper"
-                class="needle-wrapper"
-            >
-
-                <div class="needle">
-                </div>
-
-            </div>
-
-
-            <div class="gauge-center">
-            </div>
-
-
-            <div class="gauge-unit">
-                kPa
-            </div>
-
-        </div>
-
+        CLOSED
     </div>
 
 </div>
 
-
 </div>
 
 </div>
 
 
+<!-- ============================================================
+     STUDENT TASKS
+============================================================= -->
 
-<!-- =====================================================
-     TASK 1
-     RECORD BAROMETER
-===================================================== -->
+<div class="tasks-area">
+
+
+<!-- TASK 1 -->
 
 <div
     id="barometerTask"
-    class="task"
+    class="task-card"
 >
 
-<h2>
-Step 2 — Record Barometer Reading
-</h2>
+<h3>
+Step 2 — Record the Barometer Reading
+</h3>
 
 <p>
-Read the mercury level from the instrument.
+Read the top of the mercury column from the barometer scale.
 </p>
 
 
-<div class="input-row">
+<div class="measurement-row">
 
 <input
     id="barometerInput"
@@ -928,7 +1428,9 @@ Read the mercury level from the instrument.
 mmHg
 </span>
 
-<button onclick="checkBarometer()">
+<button
+    onclick="checkBarometer()"
+>
 Record Reading
 </button>
 
@@ -943,66 +1445,52 @@ Record Reading
 </div>
 
 
-
-<!-- =====================================================
-     TASK 2
-     ATMOSPHERIC PRESSURE
-===================================================== -->
+<!-- TASK 2 -->
 
 <div
-    id="atmosphericTask"
-    class="task"
+    id="atmosphereTask"
+    class="task-card"
 >
 
-<h2>
+<h3>
 Step 3 — Calculate Atmospheric Pressure
-</h2>
+</h3>
 
 <p>
-Use your recorded barometer measurement.
+Use your measured barometer reading.
 </p>
 
-
 <p>
-
 <strong>
 P<sub>atm</sub>
 =
 ρ<sub>Hg</sub>gh
 </strong>
-
 </p>
-
 
 <p>
-
-ρ<sub>Hg</sub>
-=
-13,600 kg/m³
-
+ρ<sub>Hg</sub> = 13,600 kg/m³
 <br>
-
-g
-=
-9.81 m/s²
-
+g = 9.81 m/s²
 </p>
 
 
-<div class="input-row">
+<div class="measurement-row">
 
 <input
     id="atmosphericInput"
     type="number"
     step="0.01"
-    placeholder="Enter pressure"
+    placeholder="Enter result"
 >
 
 <span>
 kPa
 </span>
 
-<button onclick="checkAtmospheric()">
+<button
+    onclick="checkAtmospheric()"
+>
 Check Calculation
 </button>
 
@@ -1017,27 +1505,23 @@ Check Calculation
 </div>
 
 
-
-<!-- =====================================================
-     TASK 3
-     GAUGE READING
-===================================================== -->
+<!-- TASK 3 -->
 
 <div
     id="gaugeTask"
-    class="task"
+    class="task-card"
 >
 
-<h2>
-Step 6 — Record Pressure Gauge Reading
-</h2>
+<h3>
+Step 6 — Record Gauge Pressure
+</h3>
 
 <p>
-Read the red needle on the pressure gauge.
+Read the red needle after the valve has been opened.
 </p>
 
 
-<div class="input-row">
+<div class="measurement-row">
 
 <input
     id="gaugeInput"
@@ -1049,7 +1533,9 @@ Read the red needle on the pressure gauge.
 kPa
 </span>
 
-<button onclick="checkGauge()">
+<button
+    onclick="checkGauge()"
+>
 Record Reading
 </button>
 
@@ -1064,52 +1550,49 @@ Record Reading
 </div>
 
 
-
-<!-- =====================================================
-     TASK 4
-     ABSOLUTE PRESSURE
-===================================================== -->
+<!-- TASK 4 -->
 
 <div
     id="absoluteTask"
-    class="task"
+    class="task-card"
 >
 
-<h2>
+<h3>
 Step 7 — Calculate Absolute Pressure
-</h2>
-
+</h3>
 
 <p>
+Use:
+</p>
 
+<p>
 <strong>
-
 P<sub>abs</sub>
 =
 P<sub>gauge</sub>
 +
 P<sub>atm</sub>
-
 </strong>
-
 </p>
 
 
-<div class="input-row">
+<div class="measurement-row">
 
 <input
     id="absoluteInput"
     type="number"
     step="0.01"
-    placeholder="Enter pressure"
+    placeholder="Enter result"
 >
 
 <span>
 kPa
 </span>
 
-<button onclick="checkAbsolute()">
-Submit Final Result
+<button
+    onclick="checkAbsolute()"
+>
+Submit Result
 </button>
 
 </div>
@@ -1123,27 +1606,25 @@ Submit Final Result
 </div>
 
 
-
-<!-- =====================================================
-     COMPLETE
-===================================================== -->
+<!-- COMPLETE -->
 
 <div
-    id="complete"
-    class="complete"
+    id="completePanel"
+    class="complete-panel"
 >
 
 <h2>
-🎉 Experiment Complete!
+🎉 Experiment Complete
 </h2>
 
 <p>
-Your final absolute pressure is within
-the required ±5% error.
+Your calculated absolute pressure is within the required ±5%.
 </p>
 
-<button onclick="location.reload()">
-🔄 Start New Experiment
+<button
+    onclick="location.reload()"
+>
+Run New Experiment
 </button>
 
 </div>
@@ -1151,96 +1632,106 @@ the required ±5% error.
 
 </div>
 
+</div>
 
 
 <script>
 
+/* ============================================================
+   ENGINEERING VALUES
+============================================================ */
 
-// ==========================================================
-// EXPERIMENT VALUES
-// ==========================================================
+const RHO_HG = 13600;
+const G = 9.81;
 
-const rhoHg = 13600;
-
-const gravity = 9.81;
-
-
-// Random barometer
-const possibleBarometer =
-[
-735,740,745,750,755,
-760,765,770,775
+const barometerValues = [
+    735,
+    740,
+    745,
+    750,
+    755,
+    760,
+    765,
+    770,
+    775
 ];
 
-
-const possibleGauge =
-[
-20,25,30,35,40,45,
-50,55,60,65,70,75,80
+const gaugeValues = [
+    20,
+    25,
+    30,
+    35,
+    40,
+    45,
+    50,
+    55,
+    60,
+    65,
+    70,
+    75,
+    80
 ];
 
 
 const barometerValue =
-possibleBarometer[
-Math.floor(
-Math.random()
-*
-possibleBarometer.length
-)
-];
+    barometerValues[
+        Math.floor(
+            Math.random()
+            *
+            barometerValues.length
+        )
+    ];
 
 
 const gaugeValue =
-possibleGauge[
-Math.floor(
-Math.random()
-*
-possibleGauge.length
-)
-];
+    gaugeValues[
+        Math.floor(
+            Math.random()
+            *
+            gaugeValues.length
+        )
+    ];
 
 
 const atmosphericPressure =
-rhoHg
-*
-gravity
-*
-(barometerValue / 1000)
-/
-1000;
+    RHO_HG
+    *
+    G
+    *
+    (
+        barometerValue
+        /
+        1000
+    )
+    /
+    1000;
 
 
 const absolutePressure =
-atmosphericPressure
-+
-gaugeValue;
+    atmosphericPressure
+    +
+    gaugeValue;
 
 
+/* ============================================================
+   STUDENT PROGRESS
+============================================================ */
 
-// ==========================================================
-// STUDENT DATA
-// ==========================================================
-
-let studentBarometer = null;
-
-let studentAtmospheric = null;
-
-let studentGauge = null;
-
+let atmosphericAccepted = false;
+let gaugeConnected = false;
 let valveOpened = false;
 
 
-
-// ==========================================================
-// CREATE BAROMETER SCALE
-// ==========================================================
+/* ============================================================
+   CREATE BAROMETER SCALE
+============================================================ */
 
 function createBarometerScale() {
 
     const scale =
-    document.getElementById(
-        "baroScale"
-    );
+        document.getElementById(
+            "baroScale"
+        );
 
 
     for (
@@ -1249,24 +1740,24 @@ function createBarometerScale() {
         value += 5
     ) {
 
-        const percent =
-        (
-            (value - 720)
-            /
-            60
-        )
-        *
-        100;
+        const percentage =
+            (
+                (value - 720)
+                /
+                60
+            )
+            *
+            100;
 
 
         const line =
-        document.createElement(
-            "div"
-        );
+            document.createElement(
+                "div"
+            );
 
 
         line.className =
-        "scale-line";
+            "baro-mark";
 
 
         if (
@@ -1281,7 +1772,9 @@ function createBarometerScale() {
 
 
         line.style.bottom =
-        percent + "%";
+            percentage
+            +
+            "%";
 
 
         scale.appendChild(
@@ -1294,21 +1787,23 @@ function createBarometerScale() {
         ) {
 
             const label =
-            document.createElement(
-                "div"
-            );
+                document.createElement(
+                    "div"
+                );
 
 
             label.className =
-            "scale-label";
+                "baro-label";
 
 
             label.style.bottom =
-            percent + "%";
+                percentage
+                +
+                "%";
 
 
             label.textContent =
-            value;
+                value;
 
 
             scale.appendChild(
@@ -1320,40 +1815,42 @@ function createBarometerScale() {
     }
 
 
-    const mercuryPercent =
-    (
-        (barometerValue - 720)
-        /
-        60
-    )
-    *
-    100;
+    const mercuryPercentage =
+        (
+            (barometerValue - 720)
+            /
+            60
+        )
+        *
+        100;
 
 
     document.getElementById(
-        "mercury"
+        "mercuryColumn"
     ).style.height =
-    mercuryPercent + "%";
+        mercuryPercentage
+        +
+        "%";
 
 }
 
 
+/* ============================================================
+   CREATE GAUGE NUMBERS
+============================================================ */
 
-// ==========================================================
-// CREATE GAUGE SCALE
-// ==========================================================
+function createGaugeNumbers() {
 
-function createGaugeScale() {
-
-    const scale =
-    document.getElementById(
-        "gaugeScale"
-    );
+    const parent =
+        document.getElementById(
+            "gaugeNumbers"
+        );
 
 
-    const center = 130;
+    const cx = 75;
+    const cy = 75;
 
-    const radius = 105;
+    const radius = 56;
 
 
     for (
@@ -1362,69 +1859,73 @@ function createGaugeScale() {
         value += 20
     ) {
 
+        const angleDeg =
+            -135
+            +
+            (
+                value
+                /
+                100
+            )
+            *
+            270;
+
+
         const angle =
-        -120
-        +
-        (value / 100)
-        *
-        240;
-
-
-        const radians =
-        angle
-        *
-        Math.PI
-        /
-        180;
+            angleDeg
+            *
+            Math.PI
+            /
+            180;
 
 
         const x =
-        center
-        +
-        radius
-        *
-        Math.sin(
-            radians
-        );
+            cx
+            +
+            radius
+            *
+            Math.cos(angle);
 
 
         const y =
-        center
-        -
-        radius
-        *
-        Math.cos(
-            radians
-        );
+            cy
+            +
+            radius
+            *
+            Math.sin(angle);
 
 
         const number =
-        document.createElement(
-            "div"
-        );
+            document.createElement(
+                "div"
+            );
 
 
         number.className =
-        "gauge-number";
+            "gauge-number";
 
 
         number.textContent =
-        value;
+            value;
 
 
         number.style.left =
-        x + "px";
+            x
+            +
+            "px";
 
 
         number.style.top =
-        y + "px";
+            y
+            +
+            "px";
 
 
         number.style.transform =
-        "translate(-50%, -50%)";
+            "translate(-50%,-50%)";
 
 
-        scale.appendChild(
+        parent.appendChild(
             number
         );
 
@@ -1433,105 +1934,144 @@ function createGaugeScale() {
 }
 
 
+/* ============================================================
+   STATUS
+============================================================ */
 
-// ==========================================================
-// DRAG
-// ==========================================================
+function setStatus(message) {
 
-function dragStart(event) {
-
-    const equipment =
-    event.currentTarget.dataset.equipment;
-
-
-    event.dataTransfer.setData(
-        "equipment",
-        equipment
-    );
+    document.getElementById(
+        "statusText"
+    ).textContent =
+        message;
 
 }
 
 
+/* ============================================================
+   DRAG START
+============================================================ */
 
-// ==========================================================
-// ALLOW DROP
-// ==========================================================
+document.querySelectorAll(
+    ".instrument"
+).forEach(
+    element => {
 
-function allowDrop(event) {
+        element.addEventListener(
+            "dragstart",
+            event => {
 
-    event.preventDefault();
+                event.dataTransfer.setData(
+                    "text/plain",
+                    element.dataset.equipment
+                );
 
+            }
+        );
 
-    event.currentTarget.classList.add(
-        "drag-over"
-    );
-
-}
-
-
-
-// ==========================================================
-// LEAVE DROP
-// ==========================================================
-
-function leaveDrop(event) {
-
-    event.currentTarget.classList.remove(
-        "drag-over"
-    );
-
-}
+    }
+);
 
 
+/* ============================================================
+   ATMOSPHERE DROP
+============================================================ */
 
-// ==========================================================
-// DROP EQUIPMENT
-// ==========================================================
-
-function dropEquipment(event) {
-
-    event.preventDefault();
-
-
-    event.currentTarget.classList.remove(
-        "drag-over"
+const atmosphereStation =
+    document.getElementById(
+        "atmosphereStation"
     );
 
 
-    const equipment =
-    event.dataTransfer.getData(
-        "equipment"
-    );
+atmosphereStation.addEventListener(
+    "dragover",
+    event => {
+
+        event.preventDefault();
+
+        atmosphereStation.classList.add(
+            "drag-over"
+        );
+
+    }
+);
 
 
-    const zone =
-    event.currentTarget.dataset.zone;
+atmosphereStation.addEventListener(
+    "dragleave",
+    () => {
+
+        atmosphereStation.classList.remove(
+            "drag-over"
+        );
+
+    }
+);
 
 
+atmosphereStation.addEventListener(
+    "drop",
+    event => {
 
-    // BAROMETER
+        event.preventDefault();
 
-    if (
-        equipment === "barometer"
-        &&
-        zone === "atmosphere"
-    ) {
 
-        event.currentTarget.classList.add(
-            "success"
+        atmosphereStation.classList.remove(
+            "drag-over"
         );
 
 
-        document.getElementById(
-            "barometerDisplay"
-        ).style.display =
-        "block";
+        const equipment =
+            event.dataTransfer.getData(
+                "text/plain"
+            );
 
 
-        document.getElementById(
-            "barometerInstrument"
-        ).style.display =
-        "none";
+        if (
+            equipment
+            !==
+            "barometer"
+        ) {
+
+            alert(
+                "Use the mercury barometer at this station."
+            );
+
+            return;
+
+        }
+
+
+        const barometer =
+            document.getElementById(
+                "barometerInstrument"
+            );
+
+
+        atmosphereStation.appendChild(
+            barometer
+        );
+
+
+        barometer.style.position =
+            "absolute";
+
+        barometer.style.left =
+            "62px";
+
+        barometer.style.top =
+            "45px";
+
+        barometer.style.margin =
+            "0";
+
+        barometer.draggable =
+            false;
+
+
+        atmosphereStation.classList.add(
+            "active"
+        );
 
 
         document.getElementById(
@@ -1542,100 +2082,40 @@ function dropEquipment(event) {
 
 
         setStatus(
-            "Step 2: Read the mercury barometer and record the measurement."
+            "Step 2 — Read the mercury barometer and record the measurement."
         );
-
-
-        return;
 
     }
+);
 
 
-
-    // GAUGE
-
-    if (
-        equipment === "gauge"
-        &&
-        zone === "vessel"
-    ) {
-
-        if (
-            studentAtmospheric === null
-        ) {
-
-            alert(
-                "Determine atmospheric pressure before connecting the pressure gauge."
-            );
-
-            return;
-
-        }
-
-
-        event.currentTarget.classList.add(
-            "success"
-        );
-
-
-        document.getElementById(
-            "gaugeInstrument"
-        ).style.display =
-        "none";
-
-
-        document.getElementById(
-            "valveArea"
-        ).style.display =
-        "block";
-
-
-        setStatus(
-            "Step 5: Pressure gauge connected. Open the test-port valve."
-        );
-
-
-        return;
-
-    }
-
-
-
-    alert(
-        "That instrument does not belong in this location."
-    );
-
-}
-
-
-
-// ==========================================================
-// BAROMETER CHECK
-// ==========================================================
+/* ============================================================
+   CHECK BAROMETER
+============================================================ */
 
 function checkBarometer() {
 
     const answer =
-    parseFloat(
-        document.getElementById(
-            "barometerInput"
-        ).value
-    );
+        parseFloat(
+            document.getElementById(
+                "barometerInput"
+            ).value
+        );
 
 
     const feedback =
-    document.getElementById(
-        "barometerFeedback"
-    );
+        document.getElementById(
+            "barometerFeedback"
+        );
 
 
     if (
-        isNaN(answer)
+        Number.isNaN(answer)
     ) {
 
         showFeedback(
             feedback,
-            "Enter a numerical reading.",
+            "Enter a numerical measurement.",
             false
         );
 
@@ -1654,26 +2134,22 @@ function checkBarometer() {
         2.5
     ) {
 
-        studentBarometer =
-        answer;
-
-
         showFeedback(
             feedback,
-            "✓ Measurement recorded.",
+            "✓ Barometer measurement recorded.",
             true
         );
 
 
         document.getElementById(
-            "atmosphericTask"
+            "atmosphereTask"
         ).classList.add(
             "active"
         );
 
 
         setStatus(
-            "Step 3: Calculate atmospheric pressure using your barometer reading."
+            "Step 3 — Calculate atmospheric pressure using the measured barometer height."
         );
 
     }
@@ -1682,7 +2158,7 @@ function checkBarometer() {
 
         showFeedback(
             feedback,
-            "Recheck the mercury level and scale.",
+            "Recheck the top of the mercury column and the scale.",
             false
         );
 
@@ -1691,29 +2167,28 @@ function checkBarometer() {
 }
 
 
-
-// ==========================================================
-// ATMOSPHERIC PRESSURE
-// ==========================================================
+/* ============================================================
+   CHECK ATMOSPHERIC PRESSURE
+============================================================ */
 
 function checkAtmospheric() {
 
     const answer =
-    parseFloat(
-        document.getElementById(
-            "atmosphericInput"
-        ).value
-    );
+        parseFloat(
+            document.getElementById(
+                "atmosphericInput"
+            ).value
+        );
 
 
     const feedback =
-    document.getElementById(
-        "atmosphericFeedback"
-    );
+        document.getElementById(
+            "atmosphericFeedback"
+        );
 
 
     if (
-        isNaN(answer)
+        Number.isNaN(answer)
     ) {
 
         showFeedback(
@@ -1728,32 +2203,32 @@ function checkAtmospheric() {
 
 
     const error =
-    Math.abs(
-        answer
-        -
-        atmosphericPressure
-    )
-    /
-    atmosphericPressure;
+        Math.abs(
+            answer
+            -
+            atmosphericPressure
+        )
+        /
+        atmosphericPressure;
 
 
     if (
         error <= 0.05
     ) {
 
-        studentAtmospheric =
-        answer;
+        atmosphericAccepted =
+            true;
 
 
         showFeedback(
             feedback,
-            "✓ Atmospheric pressure accepted. Result is within ±5%.",
+            "✓ Atmospheric pressure accepted. Your result is within ±5%.",
             true
         );
 
 
         setStatus(
-            "Step 4: Drag the pressure gauge from the equipment tray to the vessel test port."
+            "Step 4 — Drag the pressure gauge from the equipment shelf to the vessel test port."
         );
 
     }
@@ -1762,7 +2237,7 @@ function checkAtmospheric() {
 
         showFeedback(
             feedback,
-            "Result is outside ±5%. Recheck the calculation.",
+            "Result is outside ±5%. Check your unit conversion and P = ρgh.",
             false
         );
 
@@ -1771,45 +2246,193 @@ function checkAtmospheric() {
 }
 
 
+/* ============================================================
+   GAUGE DROP
+============================================================ */
 
-// ==========================================================
-// OPEN VALVE
-// ==========================================================
+const portDropZone =
+    document.getElementById(
+        "portDropZone"
+    );
 
-function openValve() {
+
+portDropZone.addEventListener(
+    "dragover",
+    event => {
+
+        event.preventDefault();
+
+        portDropZone.classList.add(
+            "drag-over"
+        );
+
+    }
+);
+
+
+portDropZone.addEventListener(
+    "dragleave",
+    () => {
+
+        portDropZone.classList.remove(
+            "drag-over"
+        );
+
+    }
+);
+
+
+portDropZone.addEventListener(
+    "drop",
+    event => {
+
+        event.preventDefault();
+
+
+        portDropZone.classList.remove(
+            "drag-over"
+        );
+
+
+        const equipment =
+            event.dataTransfer.getData(
+                "text/plain"
+            );
+
+
+        if (
+            equipment
+            !==
+            "gauge"
+        ) {
+
+            alert(
+                "Connect the pressure gauge to the vessel test port."
+            );
+
+            return;
+
+        }
+
+
+        if (
+            !atmosphericAccepted
+        ) {
+
+            alert(
+                "Complete the atmospheric pressure measurement first."
+            );
+
+            return;
+
+        }
+
+
+        const gauge =
+            document.getElementById(
+                "gaugeInstrument"
+            );
+
+
+        document.querySelector(
+            ".pressure-area"
+        ).appendChild(
+            gauge
+        );
+
+
+        gauge.classList.add(
+            "connected-gauge"
+        );
+
+
+        gauge.draggable =
+            false;
+
+
+        document.getElementById(
+            "hose"
+        ).classList.add(
+            "connected"
+        );
+
+
+        document.getElementById(
+            "valveGroup"
+        ).classList.add(
+            "visible"
+        );
+
+
+        gaugeConnected =
+            true;
+
+
+        setStatus(
+            "Step 5 — Gauge connected. Turn the red valve handle to OPEN."
+        );
+
+    }
+);
+
+
+/* ============================================================
+   TURN VALVE
+============================================================ */
+
+function turnValve() {
+
+    if (
+        !gaugeConnected
+    ) {
+        return;
+    }
+
+
+    if (
+        valveOpened
+    ) {
+        return;
+    }
+
 
     valveOpened =
-    true;
+        true;
 
 
     document.getElementById(
-        "valveArea"
-    ).style.display =
-    "none";
+        "valveHandle"
+    ).classList.add(
+        "open"
+    );
 
 
     document.getElementById(
-        "gaugeDisplay"
-    ).style.display =
-    "block";
+        "valveLabel"
+    ).textContent =
+        "OPEN";
 
 
     const needleAngle =
-    -120
-    +
-    (
-        gaugeValue
-        /
-        100
-    )
-    *
-    240;
+        -135
+        +
+        (
+            gaugeValue
+            /
+            100
+        )
+        *
+        270;
 
 
     document.getElementById(
-        "needleWrapper"
+        "needleHolder"
     ).style.transform =
-    `rotate(${needleAngle}deg)`;
+        "rotate("
+        +
+        needleAngle
+        +
+        "deg)";
 
 
     document.getElementById(
@@ -1820,35 +2443,34 @@ function openValve() {
 
 
     setStatus(
-        "Step 6: Valve open. Read the pressure gauge and record the measurement."
+        "Step 6 — Valve open. Read the pressure gauge and record the measurement."
     );
 
 }
 
 
-
-// ==========================================================
-// GAUGE READING
-// ==========================================================
+/* ============================================================
+   CHECK GAUGE
+============================================================ */
 
 function checkGauge() {
 
     const answer =
-    parseFloat(
-        document.getElementById(
-            "gaugeInput"
-        ).value
-    );
+        parseFloat(
+            document.getElementById(
+                "gaugeInput"
+            ).value
+        );
 
 
     const feedback =
-    document.getElementById(
-        "gaugeFeedback"
-    );
+        document.getElementById(
+            "gaugeFeedback"
+        );
 
 
     if (
-        isNaN(answer)
+        Number.isNaN(answer)
     ) {
 
         showFeedback(
@@ -1872,13 +2494,9 @@ function checkGauge() {
         2.5
     ) {
 
-        studentGauge =
-        answer;
-
-
         showFeedback(
             feedback,
-            "✓ Gauge pressure measurement recorded.",
+            "✓ Gauge pressure recorded.",
             true
         );
 
@@ -1891,7 +2509,7 @@ function checkGauge() {
 
 
         setStatus(
-            "Step 7: Calculate the absolute pressure."
+            "Step 7 — Calculate absolute pressure using your measured atmospheric and gauge pressures."
         );
 
     }
@@ -1900,7 +2518,7 @@ function checkGauge() {
 
         showFeedback(
             feedback,
-            "Recheck the pressure gauge needle.",
+            "Recheck the position of the red gauge needle.",
             false
         );
 
@@ -1909,29 +2527,28 @@ function checkGauge() {
 }
 
 
-
-// ==========================================================
-// ABSOLUTE PRESSURE
-// ==========================================================
+/* ============================================================
+   CHECK ABSOLUTE PRESSURE
+============================================================ */
 
 function checkAbsolute() {
 
     const answer =
-    parseFloat(
-        document.getElementById(
-            "absoluteInput"
-        ).value
-    );
+        parseFloat(
+            document.getElementById(
+                "absoluteInput"
+            ).value
+        );
 
 
     const feedback =
-    document.getElementById(
-        "absoluteFeedback"
-    );
+        document.getElementById(
+            "absoluteFeedback"
+        );
 
 
     if (
-        isNaN(answer)
+        Number.isNaN(answer)
     ) {
 
         showFeedback(
@@ -1946,13 +2563,13 @@ function checkAbsolute() {
 
 
     const error =
-    Math.abs(
-        answer
-        -
-        absolutePressure
-    )
-    /
-    absolutePressure;
+        Math.abs(
+            answer
+            -
+            absolutePressure
+        )
+        /
+        absolutePressure;
 
 
     if (
@@ -1967,13 +2584,14 @@ function checkAbsolute() {
 
 
         document.getElementById(
-            "complete"
-        ).style.display =
-        "block";
+            "completePanel"
+        ).classList.add(
+            "visible"
+        );
 
 
         setStatus(
-            "Experiment complete!"
+            "Experiment complete — final result is within ±5%."
         );
 
     }
@@ -1982,7 +2600,7 @@ function checkAbsolute() {
 
         showFeedback(
             feedback,
-            "Result is outside ±5%. Recheck Pgauge + Patm.",
+            "Result is outside ±5%. Recheck Pabs = Pgauge + Patm.",
             false
         );
 
@@ -1991,10 +2609,9 @@ function checkAbsolute() {
 }
 
 
-
-// ==========================================================
-// FEEDBACK
-// ==========================================================
+/* ============================================================
+   FEEDBACK
+============================================================ */
 
 function showFeedback(
     element,
@@ -2003,45 +2620,28 @@ function showFeedback(
 ) {
 
     element.className =
-    correct
-    ?
-    "feedback correct"
-    :
-    "feedback incorrect";
+        correct
+        ?
+        "feedback correct"
+        :
+        "feedback incorrect";
 
 
     element.textContent =
-    message;
+        message;
 
 }
 
 
-
-// ==========================================================
-// STATUS
-// ==========================================================
-
-function setStatus(message) {
-
-    document.getElementById(
-        "status"
-    ).textContent =
-    message;
-
-}
-
-
-
-// ==========================================================
-// START
-// ==========================================================
+/* ============================================================
+   START
+============================================================ */
 
 createBarometerScale();
 
-createGaugeScale();
+createGaugeNumbers();
 
 </script>
-
 
 </body>
 
@@ -2051,6 +2651,6 @@ createGaugeScale();
 
 components.html(
     virtual_lab,
-    height=1500,
+    height=1700,
     scrolling=True
 )
